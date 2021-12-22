@@ -36,5 +36,9 @@ if __name__ == '__main__':
     recreate_dir_list([train_img_path, train_label_path, validation_img_path, validation_label_path,
                        test_img_path, test_label_path])
 
+    is_bmp_to_png = False
     # 将label原bmp格式修改为png bmp有点大
-    # label_bmp_to_png(label_original_path)
+    if is_bmp_to_png:
+        label_bmp_to_png(label_original_path)
+
+
