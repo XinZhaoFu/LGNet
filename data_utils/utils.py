@@ -2,6 +2,7 @@ import os
 import shutil
 import numpy as np
 from tqdm import tqdm
+from glob import glob
 
 
 def create_dir(folder_name):
@@ -38,7 +39,7 @@ def recreate_dir_list(dir_list):
     :param dir_list:
     :return: None
     """
-    for folder_name in tqdm(dir_list):
+    for folder_name in dir_list:
         recreate_dir(folder_name)
 
 
@@ -62,15 +63,54 @@ def distribution_file(file_path_list, target_file_path, is_recreate_dir=False):
 
 def shuffle_file(img_file_list, label_file_list):
     """
-    打乱img和label的文件列表顺序 并返回两列表 seed已固定
+    打乱img和label的文件列表顺序 但对位文件顺序不变 并返回两列表 seed已固定以此保证实验可重复性
 
     :param img_file_list:
     :param label_file_list:
     :return:
     """
+    assert len(img_file_list) == len(label_file_list)
     np.random.seed(10)
     index = [i for i in range(len(img_file_list))]
     np.random.shuffle(index)
     img_file_list = np.array(img_file_list)[index]
     label_file_list = np.array(label_file_list)[index]
     return img_file_list, label_file_list
+
+
+def get_specific_type_file_list(file_path, file_type):
+    """
+    对glob进行了一次封装 旨在避免有时windows下会出现反斜杠与斜杠混用的情况
+
+    :param file_path:
+    :param file_type:
+    :return:
+    """
+    file_list = glob(file_path + '*.' + file_type)
+    if '\\' in file_list[0]:
+        file_list = [file.replace('\\', '/') for file in file_list]
+
+    return file_list
+
+
+def file_consistency_check(img_file_list, label_file_list):
+    """
+    校验文件是否对应
+
+    :param img_file_list:
+    :param label_file_list:
+    :return flag:
+    """
+    flag = True
+    print('[INFO] 文件一致性校验')
+    assert len(img_file_list) == len(label_file_list)
+    for img_path, label_path in tqdm(zip(img_file_list, label_file_list), total=len(img_file_list)):
+        img_name = (img_path.split('/')[-1]).split('.')[0]
+        label_name = (label_path.split('/')[-1]).split('.')[0]
+        if img_name != label_name:
+            flag = False
+            break
+
+    return flag
+
+

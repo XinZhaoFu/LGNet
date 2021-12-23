@@ -1,9 +1,10 @@
 import yaml
+from loguru import logger
 
 
 def config_init():
     init_data = {
-        'refuge_data': {
+        'refuge_info': {
             'img_original_path': '../datasets/refuge_img/',
             'label_original_path': '../datasets/refuge_label/',
             'train_img_path': '../datasets/train/img/',
@@ -17,6 +18,10 @@ def config_init():
             'test_file_number_rate': 0.2
         }
     }
+
+    logger.add('../log/config_init.log', format='{time} | {level} | {message}', level='INFO')
+    logger.info(init_data)
+
     file_writer = open('./config.yml', 'w', encoding='utf-8')
     yaml.dump(init_data, file_writer, allow_unicode=True)
     yaml.load(open('./config.yml'), Loader=yaml.FullLoader)
