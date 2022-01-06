@@ -141,4 +141,4 @@ def distribution(is_bmp_to_png, is_data_resize, config_path):
 if __name__ == '__main__':
     # is_bmp_to_png 是否将原始label由bmp格式转为png格式
     # is_data_resize 是否将训练集和验证集的图片调整为512*512的尺寸
-    distribution(is_bmp_to_png=False, is_data_resize=True, config_path='../config/config.yml')
+    distribution(is_bmp_to_png=True, is_data_resize=True, config_path='../config/config.yml')

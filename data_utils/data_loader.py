@@ -4,36 +4,36 @@ import tensorflow as tf
 
 class Data_Loader_File:
     def __init__(self,
-                 train_img_file_path,
-                 train_label_file_path,
-                 validation_img_file_path,
-                 validation_label_file_path,
+                 train_img_path,
+                 train_label_path,
+                 validation_img_path,
+                 validation_label_path,
                  batch_size,
                  is_data_augmentation=False,
                  data_augmentation_info=None):
         """
         构建数据管道
 
-        :param train_img_file_path:
-        :param train_label_file_path:
-        :param validation_img_file_path:
-        :param validation_label_file_path:
+        :param train_img_path:
+        :param train_label_path:
+        :param validation_img_path:
+        :param validation_label_path:
         :param batch_size:
         :param is_data_augmentation:
         :param data_augmentation_info:
         """
-        self.train_img_file_path = train_img_file_path
-        self.train_label_file_path = train_label_file_path
-        self.validation_img_file_path = validation_img_file_path
-        self.validation_label_file_path = validation_label_file_path
+        self.train_img_path = train_img_path
+        self.train_label_path = train_label_path
+        self.validation_img_path = validation_img_path
+        self.validation_label_path = validation_label_path
         self.batch_size = batch_size
         self.is_data_augmentation = is_data_augmentation
         self.data_augmentation_info = data_augmentation_info
 
     def load_train_data(self):
         print('[INFO] 正在载入训练集')
-        train_datasets = _data_preprocess(self.train_img_file_path,
-                                          self.train_label_file_path,
+        train_datasets = _data_preprocess(self.train_img_path,
+                                          self.train_label_path,
                                           self.batch_size,
                                           self.is_data_augmentation,
                                           self.data_augmentation_info)
@@ -41,8 +41,8 @@ class Data_Loader_File:
 
     def load_val_data(self):
         print('[INFO] 正在载入验证集')
-        validation_datasets = _data_preprocess(self.validation_img_file_path,
-                                               self.validation_label_file_path,
+        validation_datasets = _data_preprocess(self.validation_img_path,
+                                               self.validation_label_path,
                                                self.batch_size)
         return validation_datasets
 

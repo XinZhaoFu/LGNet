@@ -16,6 +16,18 @@ def config_init():
             'train_file_number_rate': 0.6,
             'validation_file_number_rate': 0.2,
             'test_file_number_rate': 0.2
+        },
+
+        'train_info': {
+            'ex_name': 'lgnet_refuge',
+            'is_load_weight': True,
+            'batch_size': 4,
+            'epochs': 0,
+            'is_data_augmentation': False,
+            'learning_rate': 0.0,
+            'augmentation_rate': 0.0,
+            'checkpoint_save_path': '',
+            'checkpoint_input_path': ''
         }
     }
 

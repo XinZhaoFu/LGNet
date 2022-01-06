@@ -87,7 +87,7 @@ def get_specific_type_file_list(file_path, file_type):
     :return:
     """
     file_list = glob(file_path + '*.' + file_type)
-    if '\\' in file_list[0]:
+    if len(file_list) > 0 and '\\' in file_list[0]:
         file_list = [file.replace('\\', '/') for file in file_list]
 
     return file_list

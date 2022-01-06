@@ -1,12 +1,22 @@
 refuge_info:
-  img_original_path: ../datasets/refuge_datasets/refuge_img/
-  label_original_path: ../datasets/refuge_datasets/refuge_label/
+  img_original_path: ../datasets/refuge_img/
+  label_original_path: ../datasets/refuge_label/
   test_file_number_rate: 0.2
-  test_img_path: ../datasets/refuge_datasets/test/img/
-  test_label_path: ../datasets/refuge_datasets/test/label/
+  test_img_path: ../datasets/test/img/
+  test_label_path: ../datasets/test/label/
   train_file_number_rate: 0.6
-  train_img_path: ../datasets/refuge_datasets/train/img/
-  train_label_path: ../datasets/refuge_datasets/train/label/
+  train_img_path: ../datasets/train/img/
+  train_label_path: ../datasets/train/label/
   validation_file_number_rate: 0.2
-  validation_img_path: ../datasets/refuge_datasets/validation/img/
-  validation_label_path: ../datasets/refuge_datasets/validation/label/
+  validation_img_path: ../datasets/validation/img/
+  validation_label_path: ../datasets/validation/label/
+train_info:
+  augmentation_rate: 0.0
+  batch_size: 4
+  checkpoint_input_path: ''
+  checkpoint_save_path: ''
+  epochs: 0
+  ex_name: lgnet_refuge
+  is_data_augmentation: false
+  is_load_weight: true
+  learning_rate: 0.0
