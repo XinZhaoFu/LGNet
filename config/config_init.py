@@ -19,19 +19,28 @@ def config_init():
         },
 
         'train_info': {
-            'ex_name': 'lgnet_refuge',
-            'is_load_weight': True,
+            'experiment_name': 'lgnet_refuge',
+            'is_load_weight': False,
             'batch_size': 4,
-            'epochs': 0,
+            'epochs': 1,
             'is_data_augmentation': False,
-            'learning_rate': 0.0,
-            'augmentation_rate': 0.0,
-            'checkpoint_save_path': '',
-            'checkpoint_input_path': ''
+            'learning_rate': 0.0001,
+            'augmentation_rate': 0,
+            'checkpoint_save_path': './checkpoint/',
+            'checkpoint_input_path': '',
+            'optimizers': 'Adam',
+            'num_class': 3,
+            'model_name': 'lgnet'
+        },
+
+        'lgnet_info': {
+            'filters_cbr': 32,
+            'num_cbr': 1,
+            'end_activation': 'softmax'
         }
     }
 
-    logger.add('../log/config_init.log', format='{time} | {level} | {message}', level='INFO')
+    logger.add('../log/config_init.log', format='{time} | {message}', level='INFO')
     logger.info(init_data)
 
     file_writer = open('./config.yml', 'w', encoding='utf-8')

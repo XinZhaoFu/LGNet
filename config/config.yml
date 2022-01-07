@@ -1,3 +1,7 @@
+lgnet_info:
+  end_activation: softmax
+  filters_cbr: 32
+  num_cbr: 1
 refuge_info:
   img_original_path: ../datasets/refuge_img/
   label_original_path: ../datasets/refuge_label/
@@ -11,12 +15,14 @@ refuge_info:
   validation_img_path: ../datasets/validation/img/
   validation_label_path: ../datasets/validation/label/
 train_info:
-  augmentation_rate: 0.0
+  augmentation_rate: 0
   batch_size: 4
   checkpoint_input_path: ''
-  checkpoint_save_path: ''
-  epochs: 0
-  ex_name: lgnet_refuge
+  checkpoint_save_path: ./checkpoint/
+  epochs: 1
+  experiment_name: lgnet_refuge
   is_data_augmentation: false
-  is_load_weight: true
+  is_load_weight: False
   learning_rate: 0.0
+  num_class: 3
+  optimizers: Adam

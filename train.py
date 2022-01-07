@@ -69,40 +69,50 @@ class Train:
                  train_label_path,
                  validation_img_path,
                  validation_label_path,
-                 load_weights=False,
-                 batch_size=128,
-                 epochs=0,
-                 is_data_augmentation=False,
-                 augmentation_rate=1,
-                 learning_rate=0,
-                 ex_info='info',
-                 checkpoint_save_path='./checkpoint/'):
+                 is_load_weight,
+                 batch_size,
+                 epochs,
+                 is_data_augmentation,
+                 augmentation_rate,
+                 learning_rate,
+                 experiment_name,
+                 checkpoint_save_path,
+                 checkpoint_input_path,
+                 model_name,
+                 optimizers,
+                 num_class,
+                 model_info):
         """
 
         :param train_img_path:
         :param train_label_path:
         :param validation_img_path:
         :param validation_label_path:
-        :param load_weights:
+        :param is_load_weight:
         :param batch_size:
         :param epochs:
         :param is_data_augmentation:
         :param augmentation_rate:
         :param learning_rate:
-        :param ex_info:
+        :param experiment_name:
         :param checkpoint_save_path:
+        :param checkpoint_input_path:
+        :param optimizers:
+        :param num_class:
+        :param model_info:
         """
-        self.load_weights = load_weights
+        self.load_weights = is_load_weight
         self.batch_size = batch_size
         self.epochs = epochs
         self.is_data_augmentation = is_data_augmentation
-
+        self.optimizers = optimizers
         self.augmentation_rate = augmentation_rate
         self.learning_rate = learning_rate
-        self.checkpoint_save_path = checkpoint_save_path + ex_info + '.ckpt'
-        # self.checkpoint_input_path = './checkpoint/' + 'u2net_dice_02aug42000' + '.ckpt'
-        self.checkpoint_input_path = self.checkpoint_save_path
-        print('[INFO] checkpoint_input_path:\t' + self.checkpoint_input_path)
+        self.checkpoint_save_path = checkpoint_save_path + experiment_name + '.ckpt'
+        self.checkpoint_input_path = checkpoint_input_path
+        self.model_name = model_name
+        self.model_info = model_info
+        self.num_class = num_class
 
         self.strategy = tf.distribute.MirroredStrategy()
         print('目前使用gpu数量为: {}'.format(self.strategy.num_replicas_in_sync))
@@ -110,13 +120,13 @@ class Train:
             print('[INFO]----------卡数上八!!!---------')
             sys.exit()
 
-        data_loader = Data_Loader_File(train_img_path,
-                                       train_label_path,
-                                       validation_img_path,
-                                       validation_label_path,
-                                       batch_size,
-                                       is_data_augmentation=False,
-                                       data_augmentation_info=None)
+        data_loader = Data_Loader_File(train_img_path=train_img_path,
+                                       train_label_path=train_label_path,
+                                       validation_img_path=validation_img_path,
+                                       validation_label_path=validation_label_path,
+                                       batch_size=batch_size,
+                                       is_data_augmentation=is_data_augmentation,
+                                       augmentation_rate=augmentation_rate)
         self.train_datasets = data_loader.load_train_data()
         self.val_datasets = data_loader.load_val_data()
 
@@ -128,26 +138,42 @@ class Train:
         """
         with self.strategy.scope():
 
-            model = LGNet(filters_cbr=32, num_class=3, num_cbr=1, end_activation='softmax')
+            match self.model_name:
+                case 'lgnet':
+                    filters_cbr = self.model_info['filters_cbr']
+                    num_cbr = self.model_info['num_cbr']
+                    end_activation = self.model_info['end_activation']
+                    model = LGNet(filters_cbr=filters_cbr,
+                                  num_class=self.num_class,
+                                  num_cbr=num_cbr,
+                                  end_activation=end_activation)
+                case None | _:
+                    print('[INFO]模型数据有误')
+                    sys.exit()
 
-            if self.learning_rate > 0:
-                optimizer = tf.keras.optimizers.SGD(learning_rate=self.learning_rate)
-                print('[INFO] 使用sgd,其值为：\t' + str(self.learning_rate))
-            else:
-                optimizer = 'Adam'
-                print('[INFO] 使用Adam')
+            match self.optimizers:
+                case 'Adam':
+                    optimizer = 'Adam'
+                    print('[INFO] 使用Adam')
+                case 'SGD':
+                    optimizer = tf.keras.optimizers.SGD(learning_rate=self.learning_rate)
+                    print('[INFO] 使用SGD,其值为：\t' + str(self.learning_rate))
+                case _:
+                    optimizer = 'Adam'
+                    print('[INFO] 未设置优化器 默认使用Adam')
 
             model.compile(
                 optimizer=optimizer,
                 loss=tf.keras.losses.CategoricalCrossentropy,
-                metrics=[tf.keras.metrics.MeanIoU(num_classes=2), 'categorical_accuracy']
+                metrics=[tf.keras.metrics.MeanIoU(num_classes=self.num_class), 'categorical_accuracy']
             )
 
             if os.path.exists(self.checkpoint_input_path + '.index') and self.load_weights:
                 print("[INFO] -------------------------------------------------")
                 print("[INFO] -----------------loading weights-----------------")
                 print("[INFO] -------------------------------------------------")
-                model.load_weights(self.checkpoint_input_path)
+                print('[INFO] checkpoint_input_path:\t' + self.checkpoint_input_path)
+                model.load_weights(filepath=self.checkpoint_input_path)
 
             checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
                 filepath=self.checkpoint_save_path,
@@ -173,11 +199,11 @@ class Train:
         return history
 
 
-def plot_learning_curves(history, plt_name):
+def plot_learning_curves(history):
     pd.DataFrame(history.history).plot(figsize=(8, 5))
     plt.grid(True)
     plt.gca().set_ylim(0, 1)
-    plt.savefig('./log/' + plt_name + '.jpg')
+    plt.savefig('./log/log_{time}.jpg')
 
 
 def train_init(config_path='../config/config.yml'):
@@ -186,6 +212,8 @@ def train_init(config_path='../config/config.yml'):
 
     :return:
     """
+    start_time = datetime.datetime.now()
+
     config_reader = ConfigReader(config_path)
 
     refuge_info = config_reader.get_refuge_info()
@@ -194,25 +222,52 @@ def train_init(config_path='../config/config.yml'):
     validation_img_path = refuge_info['validation_img_path']
     validation_label_path = refuge_info['validation_label_path']
 
-    ex_info = 'u2net_dice_02aug42000'
+    train_info = config_reader.get_train_info()
+    experiment_name = train_info['experiment_name']
+    is_load_weight = train_info['is_load_weight']
+    batch_size = train_info['batch_size']
+    epochs = train_info['epochs']
+    is_data_augmentation = train_info['is_data_augmentation']
+    learning_rate = train_info['learning_rate']
+    augmentation_rate = train_info['augmentation_rate']
+    checkpoint_save_path = train_info['checkpoint_save_path']
+    checkpoint_input_path = train_info['checkpoint_input_path']
+    optimizers = train_info['optimizers']
+    num_class = train_info['num_class']
+    model_name = train_info['model_name']
 
-    print('[INFO] 实验名称：' + ex_info)
+    lgnet_info = config_reader.get_lgnet_info()
 
-    start_time = datetime.datetime.now()
+    model_info = None
+    match model_name:
+        case 'lgnet': model_info = lgnet_info
 
     tran_tab = str.maketrans('- :.', '____')
-    plt_name = ex_info + str(start_time).translate(tran_tab)
+    experiment_name = experiment_name + str(start_time)[:19].translate(tran_tab)
+    print('[INFO] 实验名称：' + experiment_name)
 
     args = parseArgs()
-    seg = Train(load_weights=args.load_weights,
-                batch_size=args.batch_size,
-                epochs=args.epochs,
-                data_augmentation=args.data_augmentation,
-                learning_rate=args.learning_rate,
-                ex_info=ex_info)
+    seg = Train(train_img_path,
+                train_label_path,
+                validation_img_path,
+                validation_label_path,
+                is_load_weight,
+                batch_size,
+                epochs,
+                is_data_augmentation,
+                augmentation_rate,
+                learning_rate,
+                experiment_name,
+                checkpoint_save_path,
+                checkpoint_input_path,
+                model_name,
+                optimizers,
+                num_class,
+                model_info
+                )
 
     history = seg.model_train()
-    plot_learning_curves(history, plt_name)
+    plot_learning_curves(history)
 
     end_time = datetime.datetime.now()
     print('time:\t' + str(end_time - start_time).split('.')[0])

@@ -8,7 +8,7 @@ class ConfigReader:
 
         file_reader = open(self.config_path, 'r', encoding='utf-8')
         self.content_dictionary = yaml.load(file_reader.read(), Loader=yaml.FullLoader)
-        logger.add('../log/log_{time}.log', format='{time} | {level} | {message}', level='INFO')
+        logger.add('../log/log_{time}.log', format='{time} | {message}', level='INFO')
         logger.info(self.content_dictionary)
 
         file_reader.close()
@@ -18,4 +18,17 @@ class ConfigReader:
         print('[INFO]读取refuge数据')
 
         return refuge_info
+
+    def get_train_info(self):
+        train_info = self.content_dictionary['train_info']
+        print('[INFO]读取训练信息')
+
+        return train_info
+
+    def get_lgnet_info(self):
+        lgnet_info = self.content_dictionary['lgnet_info']
+        print('[INFO]读取LGNet信息')
+
+        return lgnet_info
+
 
