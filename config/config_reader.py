@@ -3,12 +3,12 @@ from loguru import logger
 
 
 class ConfigReader:
-    def __init__(self, config_path='../config/config.yml'):
+    def __init__(self, config_path):
         self.config_path = config_path
 
         file_reader = open(self.config_path, 'r', encoding='utf-8')
         self.content_dictionary = yaml.load(file_reader.read(), Loader=yaml.FullLoader)
-        logger.add('../log/log_{time}.log', format='{time} | {message}', level='INFO')
+        logger.add('./log/log_{time}.log', format='{time} | {message}', level='INFO')
         logger.info(self.content_dictionary)
 
         file_reader.close()

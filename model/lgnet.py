@@ -6,10 +6,11 @@ from model.utils import CBR_Block
 class LGNet(Model):
     def __init__(self, filters_cbr=32, num_class=3, num_cbr=1, end_activation='softmax'):
         super(LGNet, self).__init__()
+
         self.filters_cbr = filters_cbr
         self.num_class = num_class
         self.num_cbr = num_cbr
-        self.end_activation = end_activation
+        self.end_activation = 'softmax'
 
         self.cbr_block1 = CBR_Block(filters=self.filters_cbr, num_cbr=self.num_cbr, block_name='down1')
         self.cbr_block2 = CBR_Block(filters=self.filters_cbr, num_cbr=self.num_cbr, block_name='down2')
@@ -74,13 +75,12 @@ class LGNet(Model):
 
 
 class Up_CBR_Block(Model):
-    def __init__(self, filters, num_cbr=1, block_name=None):
+    def __init__(self, filters, num_cbr=1, block_name=''):
         super(Up_CBR_Block, self).__init__()
         self.filters = filters
         self.num_cbr = num_cbr
         self.block_name = None
-        if block_name is not None and type(block_name) == str:
-            self.block_name = block_name
+        self.block_name = block_name
 
         self.con_blocks = CBR_Block(filters=self.filters, num_cbr=self.num_cbr, block_name=self.block_name)
         self.up = UpSampling2D(name=self.block_name + '_up_sampling')

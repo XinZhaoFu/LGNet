@@ -5,14 +5,14 @@ from loguru import logger
 def config_init():
     init_data = {
         'refuge_info': {
-            'img_original_path': '../datasets/refuge_img/',
-            'label_original_path': '../datasets/refuge_label/',
-            'train_img_path': '../datasets/train/img/',
-            'train_label_path': '../datasets/train/label/',
-            'validation_img_path': '../datasets/validation/img/',
-            'validation_label_path': '../datasets/validation/label/',
-            'test_img_path': '../datasets/test/img/',
-            'test_label_path': '../datasets/test/label/',
+            'img_original_path': './datasets/refuge_img/',
+            'label_original_path': './datasets/refuge_label/',
+            'train_img_path': './datasets/refuge_datasets/train/img/',
+            'train_label_path': './datasets/refuge_datasets/train/label/',
+            'validation_img_path': './datasets/refuge_datasets/validation/img/',
+            'validation_label_path': './datasets/refuge_datasets/validation/label/',
+            'test_img_path': './datasets/refuge_datasets/test/img/',
+            'test_label_path': './datasets/refuge_datasets/test/label/',
             'train_file_number_rate': 0.6,
             'validation_file_number_rate': 0.2,
             'test_file_number_rate': 0.2
@@ -35,8 +35,7 @@ def config_init():
 
         'lgnet_info': {
             'filters_cbr': 32,
-            'num_cbr': 1,
-            'end_activation': 'softmax'
+            'num_cbr': 1
         }
     }
 

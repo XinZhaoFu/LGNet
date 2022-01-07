@@ -3,9 +3,9 @@ import argparse
 import datetime
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
-
 from config.config_reader import ConfigReader
 from model.lgnet import LGNet
+from model.unet import UNet
 from data_utils.data_loader import Data_Loader_File
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -17,50 +17,16 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 setproctitle.setproctitle("xzf")
 
-gpus = tf.config.list_physical_devices('GPU')
-if len(gpus) > 0:
-    tf.config.experimental.set_memory_growth(gpus[0], True)
+os.environ['CUDA_VISIBLE_DEVICES'] = '6, 7'
+# gpus = tf.config.list_physical_devices('GPU')
+# if len(gpus) > 0:
+#     tf.config.experimental.set_memory_growth(gpus[0], True)
 
 policy = mixed_precision.Policy('mixed_float16')
 mixed_precision.set_global_policy(policy)
 
 print('[INFO] 计算类型: %s' % policy.compute_dtype)
 print('[INFO] 变量类型: %s' % policy.variable_dtype)
-
-
-def parseArgs():
-    """
-    获得参数
-
-    :return:
-    """
-    parser = argparse.ArgumentParser(description='lgnet')
-    parser.add_argument('--learning_rate',
-                        dest='learning_rate',
-                        help='learning_rate',
-                        default=0,
-                        type=float)
-    parser.add_argument('--epochs',
-                        dest='epochs',
-                        help='epochs',
-                        default=1,
-                        type=int)
-    parser.add_argument('--batch_size',
-                        dest='batch_size',
-                        help='batch_size',
-                        default=4,
-                        type=int)
-    parser.add_argument('--load_weights',
-                        dest='load_weights',
-                        help='load_weights type is boolean',
-                        default=False, type=bool)
-    parser.add_argument('--data_augmentation',
-                        dest='data_augmentation',
-                        help='data_augmentation type is float, range is 0 ~ 1',
-                        default=0,
-                        type=float)
-    args = parser.parse_args()
-    return args
 
 
 class Train:
@@ -138,34 +104,33 @@ class Train:
         """
         with self.strategy.scope():
 
-            match self.model_name:
-                case 'lgnet':
-                    filters_cbr = self.model_info['filters_cbr']
-                    num_cbr = self.model_info['num_cbr']
-                    end_activation = self.model_info['end_activation']
-                    model = LGNet(filters_cbr=filters_cbr,
-                                  num_class=self.num_class,
-                                  num_cbr=num_cbr,
-                                  end_activation=end_activation)
-                case None | _:
-                    print('[INFO]模型数据有误')
-                    sys.exit()
+            # 这里最好用match case 看着会更舒服一些  但是升3.10包冲突太多就算了
+            if self.model_name == 'lgnet':
+                filters_cbr = self.model_info['filters_cbr']
+                num_cbr = self.model_info['num_cbr']
+                model = LGNet(filters_cbr=filters_cbr,
+                              num_class=self.num_class,
+                              num_cbr=num_cbr)
+                # model = UNet()
+            else:
+                print('[INFO]模型数据有误')
+                sys.exit()
 
-            match self.optimizers:
-                case 'Adam':
-                    optimizer = 'Adam'
-                    print('[INFO] 使用Adam')
-                case 'SGD':
-                    optimizer = tf.keras.optimizers.SGD(learning_rate=self.learning_rate)
-                    print('[INFO] 使用SGD,其值为：\t' + str(self.learning_rate))
-                case _:
-                    optimizer = 'Adam'
-                    print('[INFO] 未设置优化器 默认使用Adam')
+            if self.optimizers == 'Adam':
+                optimizer = 'Adam'
+                print('[INFO] 使用Adam')
+            elif self.optimizers == 'SGD':
+                optimizer = tf.keras.optimizers.SGD(learning_rate=self.learning_rate)
+                print('[INFO] 使用SGD,其值为：\t' + str(self.learning_rate))
+            else:
+                optimizer = 'Adam'
+                print('[INFO] 未设置优化器 默认使用Adam')
 
             model.compile(
                 optimizer=optimizer,
-                loss=tf.keras.losses.CategoricalCrossentropy,
-                metrics=[tf.keras.metrics.MeanIoU(num_classes=self.num_class), 'categorical_accuracy']
+                loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                # metrics=[tf.keras.metrics.MeanIoU(num_classes=self.num_class), 'categorical_accuracy']
+                metrics=['accuracy']
             )
 
             if os.path.exists(self.checkpoint_input_path + '.index') and self.load_weights:
@@ -206,7 +171,7 @@ def plot_learning_curves(history):
     plt.savefig('./log/log_{time}.jpg')
 
 
-def train_init(config_path='../config/config.yml'):
+def train_init(config_path='./config/config.yml'):
     """
     初始化参数
 
@@ -239,14 +204,13 @@ def train_init(config_path='../config/config.yml'):
     lgnet_info = config_reader.get_lgnet_info()
 
     model_info = None
-    match model_name:
-        case 'lgnet': model_info = lgnet_info
+    if model_name == 'lgnet':
+        model_info = lgnet_info
 
     tran_tab = str.maketrans('- :.', '____')
     experiment_name = experiment_name + str(start_time)[:19].translate(tran_tab)
     print('[INFO] 实验名称：' + experiment_name)
 
-    args = parseArgs()
     seg = Train(train_img_path,
                 train_label_path,
                 validation_img_path,

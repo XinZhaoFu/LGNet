@@ -1,5 +1,6 @@
 from data_utils.utils import get_specific_type_file_list, shuffle_file, file_consistency_check
 import tensorflow as tf
+from glob import glob
 
 
 class Data_Loader_File:
@@ -43,7 +44,9 @@ class Data_Loader_File:
         print('[INFO] 正在载入验证集')
         validation_datasets = _data_preprocess(self.validation_img_path,
                                                self.validation_label_path,
-                                               self.batch_size)
+                                               self.batch_size,
+                                               is_data_augmentation=False,
+                                               augmentation_rate=1)
         return validation_datasets
 
 
@@ -61,14 +64,20 @@ def _data_preprocess(img_file_path,
     :param augmentation_rate:
     :return:
     """
-    img_file_list = get_specific_type_file_list(img_file_path, 'jpg')
-    label_file_list = get_specific_type_file_list(label_file_path, 'png')
+    # img_file_list = get_specific_type_file_list(img_file_path, 'jpg')
+    # label_file_list = get_specific_type_file_list(label_file_path, 'png')
+    img_file_list = glob(img_file_path + '*.jpg')
+    label_file_list = glob(label_file_path + '*.png')
+    assert len(img_file_list) > 0
+    assert len(img_file_list) == len(label_file_list)
 
     img_file_list, label_file_list = shuffle_file(img_file_list, label_file_list)
     if not file_consistency_check(img_file_list, label_file_list):
         img_file_list.sort()
         label_file_list.sort()
         img_file_list, label_file_list = shuffle_file(img_file_list, label_file_list)
+
+    print('[INFO]载入数据量：' + str(len(img_file_list)))
 
     datasets = tf.data.Dataset.from_tensor_slices((img_file_list, label_file_list))
     datasets = datasets.map(_load_and_preprocess_onehot_datasets, num_parallel_calls=tf.data.AUTOTUNE)
@@ -89,14 +98,15 @@ def _load_and_preprocess_onehot_datasets(img_path, label_path):
     """
     image = tf.io.read_file(img_path)
     image = tf.image.decode_jpeg(image, channels=3)
-    image = tf.reshape(tensor=image, shape=(512, 512))
+    # image = tf.reshape(tensor=image, shape=(512, 512))
     image = tf.cast(image, tf.float32) / 255.0
 
     label = tf.io.read_file(label_path)
     label = tf.image.decode_png(label, channels=1)
-    label = tf.reshape(tensor=label, shape=(512, 512))
+    # label = tf.reshape(tensor=label, shape=(512, 512))
 
     label = tf.cast(label, dtype=tf.uint8)
-    label = tf.one_hot(indices=label, depth=3)
+    # label = tf.one_hot(indices=label, depth=3)
+    print(image.shape, label.shape)
 
     return image, label
