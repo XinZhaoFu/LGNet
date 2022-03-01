@@ -80,7 +80,7 @@ def _data_preprocess(img_file_path,
     print('[INFO]载入数据量：' + str(len(img_file_list)))
 
     datasets = tf.data.Dataset.from_tensor_slices((img_file_list, label_file_list))
-    datasets = datasets.map(_load_and_preprocess_onehot_datasets, num_parallel_calls=tf.data.AUTOTUNE)
+    datasets = datasets.map(_load_and_preprocess_datasets, num_parallel_calls=tf.data.AUTOTUNE)
     datasets = datasets.shuffle(buffer_size=batch_size * 8)
     datasets = datasets.batch(batch_size=batch_size)
     datasets = datasets.prefetch(buffer_size=tf.data.AUTOTUNE)
@@ -88,7 +88,7 @@ def _data_preprocess(img_file_path,
     return datasets
 
 
-def _load_and_preprocess_onehot_datasets(img_path, label_path):
+def _load_and_preprocess_datasets(img_path, label_path):
     """
     对img和label进行读取预处理 其中label以onehot的形式
 

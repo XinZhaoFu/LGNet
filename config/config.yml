@@ -18,7 +18,7 @@ train_info:
   batch_size: 4
   checkpoint_input_path: ''
   checkpoint_save_path: ./checkpoint/
-  epochs: 10
+  epochs: 200
   experiment_name: lgnet_refuge
   is_data_augmentation: false
   is_load_weight: false

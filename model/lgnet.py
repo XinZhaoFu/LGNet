@@ -1,91 +1,84 @@
 from tensorflow.keras import Model
-from tensorflow.keras.layers import MaxPooling2D, UpSampling2D, concatenate
-from model.utils import CBR_Block
+from tensorflow.keras.layers import concatenate, GlobalAveragePooling2D, multiply
+from model.utils import Con_Bn_Act, DW_Con_Bn_Act, channel_shuffle, Aspp, Up_CBR_Block
+import tensorflow as tf
 
 
 class LGNet(Model):
-    def __init__(self, filters_cbr=32, num_class=3, num_cbr=1, end_activation='softmax'):
+    def __init__(self, filters=32, num_class=3):
         super(LGNet, self).__init__()
 
-        self.filters_cbr = filters_cbr
+        self.filters = filters
         self.num_class = num_class
-        self.num_cbr = num_cbr
-        self.end_activation = 'softmax'
 
-        self.cbr_block1 = CBR_Block(filters=self.filters_cbr, num_cbr=self.num_cbr, block_name='down1')
-        self.cbr_block2 = CBR_Block(filters=self.filters_cbr, num_cbr=self.num_cbr, block_name='down2')
-        self.cbr_block3 = CBR_Block(filters=self.filters_cbr, num_cbr=self.num_cbr, block_name='down3')
-        self.cbr_block4 = CBR_Block(filters=self.filters_cbr, num_cbr=self.num_cbr, block_name='down4')
-        self.cbr_block5 = CBR_Block(filters=self.filters_cbr, num_cbr=self.num_cbr, block_name='down5')
-        self.cbr_block6 = CBR_Block(filters=self.filters_cbr, num_cbr=self.num_cbr, block_name='down6')
-        self.cbr_block7 = CBR_Block(filters=self.filters_cbr, num_cbr=self.num_cbr, block_name='down7')
+        self.en_cbr1 = Con_Bn_Act(filters=self.filters, name='en_cbr1')
+        self.asb1 = ASB(filters=self.filters, block_name='asb1')
+        self.en_cbr2 = Con_Bn_Act(filters=self.filters, strides=2, name='en_cbr2')
+        self.asb2 = ASB(filters=self.filters, block_name='asb2')
+        self.en_cbr3 = Con_Bn_Act(filters=self.filters, strides=2, name='en_cbr3')
+        self.asb3 = ASB(filters=self.filters, block_name='asb3')
+        self.en_cbr4 = Con_Bn_Act(filters=self.filters, strides=2, name='en_cbr4')
+        self.asb4 = ASB(filters=self.filters, block_name='asb4')
+        self.en_cbr5 = Con_Bn_Act(filters=self.filters, strides=2, name='en_cbr5')
 
-        self.cbr_block_up7 = Up_CBR_Block(filters=self.filters_cbr, num_cbr=self.num_cbr, block_name='up7')
-        self.cbr_block_up6 = Up_CBR_Block(filters=self.filters_cbr, num_cbr=self.num_cbr, block_name='up6')
-        self.cbr_block_up5 = Up_CBR_Block(filters=self.filters_cbr, num_cbr=self.num_cbr, block_name='up5')
-        self.cbr_block_up4 = Up_CBR_Block(filters=self.filters_cbr, num_cbr=self.num_cbr, block_name='up4')
-        self.cbr_block_up3 = Up_CBR_Block(filters=self.filters_cbr, num_cbr=self.num_cbr, block_name='up3')
-        self.cbr_block_up2 = Up_CBR_Block(filters=self.filters_cbr, num_cbr=self.num_cbr, block_name='up2')
-        self.cbr_block_up1 = CBR_Block(filters=self.num_class, num_cbr=self.num_cbr, block_name='up1')
+        self.aspp = Aspp(filters=self.filters, dila_rate1=6, dila_rate2=12, dila_rate3=18, dila_rate4=24)
 
-        self.pool = MaxPooling2D(padding='same')
+        self.de_cbr_up5 = Up_CBR_Block(filters=self.filters, block_name='de_cbr_up5')
+        self.de_cbr_up4 = Up_CBR_Block(filters=self.filters, block_name='de_cbr_up4')
+        self.de_cbr_up3 = Up_CBR_Block(filters=self.filters, block_name='de_cbr_up3')
+        self.de_cbr_up2 = Up_CBR_Block(filters=self.filters, block_name='de_cbr_up2')
+        self.de_cbr1 = Con_Bn_Act(filters=self.num_class, activation='softmax', name='de_cbr1')
 
     def call(self, inputs, training=None, mask=None):
-        con1 = self.cbr_block1(inputs)
+        en_cbr1 = self.en_cbr1(inputs)
+        asb1 = self.asb1(en_cbr1)
+        en_cbr2 = self.en_cbr2(asb1)
+        asb2 = self.asb2(en_cbr2)
+        en_cbr3 = self.en_cbr3(asb2)
+        asb3 = self.asb3(en_cbr3)
+        en_cbr4 = self.en_cbr4(asb3)
+        asb4 = self.asb4(en_cbr4)
+        en_cbr5 = self.en_cbr5(asb4)
 
-        pool2 = self.pool(con1)
-        con2 = self.cbr_block2(pool2)
+        aspp = self.aspp(en_cbr5)
 
-        pool3 = self.pool(con2)
-        con3 = self.cbr_block3(pool3)
-
-        pool4 = self.pool(con3)
-        con4 = self.cbr_block4(pool4)
-
-        pool5 = self.pool(con4)
-        con5 = self.cbr_block5(pool5)
-
-        pool6 = self.pool(con5)
-        con6 = self.cbr_block6(pool6)
-
-        pool7 = self.pool(con6)
-        con7 = self.cbr_block7(pool7)
-
-        up7 = self.cbr_block_up7(con7)
-
-        merge6 = concatenate([up7, con6], axis=3)
-        up6 = self.cbr_block_up6(merge6)
-
-        merge5 = concatenate([up6, con5], axis=3)
-        up5 = self.cbr_block_up5(merge5)
-
-        merge4 = concatenate([up5, con4], axis=3)
-        up4 = self.cbr_block_up4(merge4)
-
-        merge3 = concatenate([up4, con3], axis=3)
-        up3 = self.cbr_block_up3(merge3)
-
-        merge2 = concatenate([up3, con2], axis=3)
-        up2 = self.cbr_block_up2(merge2)
-
-        merge1 = concatenate([up2, con1], axis=3)
-        out = self.cbr_block_up1(merge1)
+        de_cbr_up5 = self.de_cbr_up5(aspp)
+        de_cbr_up4 = self.de_cbr_up4(concatenate([asb4, de_cbr_up5], axis=3))
+        de_cbr_up3 = self.de_cbr_up3(concatenate([asb3, de_cbr_up4], axis=3))
+        de_cbr_up2 = self.de_cbr_up2(concatenate([asb2, de_cbr_up3], axis=3))
+        out = self.de_cbr1(concatenate([asb1, de_cbr_up2], axis=3))
 
         return out
 
 
-class Up_CBR_Block(Model):
-    def __init__(self, filters, num_cbr=1, block_name=''):
-        super(Up_CBR_Block, self).__init__()
+class ASB(Model):
+    def __init__(self, filters, block_name, groups=2):
+        super(ASB, self).__init__()
         self.filters = filters
-        self.num_cbr = num_cbr
-        self.block_name = None
-        self.block_name = block_name
+        self.block_name = block_name + '_'
+        self.groups = groups
 
-        self.con_blocks = CBR_Block(filters=self.filters, num_cbr=self.num_cbr, block_name=self.block_name)
-        self.up = UpSampling2D(name=self.block_name + '_up_sampling')
+        self.cbr1 = Con_Bn_Act(filters=self.filters//2, kernel_size=(1, 1), name=self.block_name+'ASB_cbr1x1_1')
+        self.dcbr1 = DW_Con_Bn_Act(filters=self.filters//2, name='ASB_dcbr1')
+        self.cbr2 = Con_Bn_Act(filters=self.filters//2, kernel_size=(1, 1), name=self.block_name+'ASB_cbr1x1_2')
+
+        self.gap = GlobalAveragePooling2D()
+        self.cbr3 = Con_Bn_Act(filters=self.filters//2, kernel_size=(1, 1), activation='sigmoid',
+                               name=self.block_name+'ASB_cbr1x1_3')
 
     def call(self, inputs, training=None, mask=None):
-        con = self.con_blocks(inputs)
-        out = self.up(con)
+        shortcut, part_inputs = tf.split(inputs, 2, axis=3)
+
+        cbr1 = self.cbr1(part_inputs)
+        dcbr1 = self.dcbr1(cbr1)
+        cbr2 = self.cbr2(dcbr1)
+
+        gap = self.gap(cbr2)
+        cbr3 = self.cbr3(gap)
+
+        mul = multiply([cbr2, cbr3])
+
+        out = tf.concat([shortcut, mul], axis=3)
+        out = channel_shuffle(out, 2)
+
         return out

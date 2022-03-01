@@ -102,7 +102,6 @@ def file_consistency_check(img_file_list, label_file_list):
     :return flag:
     """
     flag = True
-    print('[INFO] 文件一致性校验')
     assert len(img_file_list) == len(label_file_list)
     for img_path, label_path in tqdm(zip(img_file_list, label_file_list), total=len(img_file_list)):
         img_name = (img_path.split('/')[-1]).split('.')[0]
@@ -110,6 +109,10 @@ def file_consistency_check(img_file_list, label_file_list):
         if img_name != label_name:
             flag = False
             break
+    if flag:
+        print('[INFO] 文件一致性校验通过')
+    else:
+        print('[INFO] 文件一致性校验未通过')
 
     return flag
 

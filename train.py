@@ -1,11 +1,9 @@
 import os
-import argparse
 import datetime
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
 from config.config_reader import ConfigReader
 from model.lgnet import LGNet
-from model.unet import UNet
 from data_utils.data_loader import Data_Loader_File
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -47,7 +45,8 @@ class Train:
                  model_name,
                  optimizers,
                  num_class,
-                 model_info):
+                 model_info
+                 ):
         """
 
         :param train_img_path:
@@ -92,7 +91,8 @@ class Train:
                                        validation_label_path=validation_label_path,
                                        batch_size=batch_size,
                                        is_data_augmentation=is_data_augmentation,
-                                       augmentation_rate=augmentation_rate)
+                                       augmentation_rate=augmentation_rate
+                                       )
         self.train_datasets = data_loader.load_train_data()
         self.val_datasets = data_loader.load_val_data()
 
@@ -110,8 +110,8 @@ class Train:
                 num_cbr = self.model_info['num_cbr']
                 model = LGNet(filters_cbr=filters_cbr,
                               num_class=self.num_class,
-                              num_cbr=num_cbr)
-                # model = UNet()
+                              num_cbr=num_cbr
+                              )
             else:
                 print('[INFO]模型数据有误')
                 sys.exit()
@@ -129,8 +129,8 @@ class Train:
             model.compile(
                 optimizer=optimizer,
                 loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-                # metrics=[tf.keras.metrics.MeanIoU(num_classes=self.num_class), 'categorical_accuracy']
-                metrics=['accuracy']
+                # metrics=[tf.keras.metrics.MeanIoU(num_classes=self.num_class)]
+                metrics=['sparse_categorical_accuracy']
             )
 
             if os.path.exists(self.checkpoint_input_path + '.index') and self.load_weights:
@@ -146,7 +146,8 @@ class Train:
                 save_weights_only=True,
                 save_best_only=True,
                 mode='auto',
-                save_freq='epoch')
+                save_freq='epoch'
+            )
 
             history = model.fit(
                 self.train_datasets,

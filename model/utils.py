@@ -1,6 +1,9 @@
 from tensorflow.keras.layers import Conv2D, BatchNormalization, Activation, SeparableConv2D, \
     DepthwiseConv2D, MaxPooling2D, UpSampling2D, concatenate
 from tensorflow.keras import Model, regularizers, Sequential
+from tensorflow.python.keras import Model
+from tensorflow.python.keras.layers import UpSampling2D
+import tensorflow as tf
 
 
 class Con_Bn_Act(Model):
@@ -9,11 +12,24 @@ class Con_Bn_Act(Model):
                  kernel_size=(3, 3),
                  padding='same',
                  strides=1,
-                 activation=None,
+                 activation='relu',
                  dilation_rate=1,
                  name=None,
                  kernel_regularizer=False,
                  train_able=True):
+        """
+        Conv2D + BN + activation
+
+        :param filters:
+        :param kernel_size:
+        :param padding:
+        :param strides:
+        :param activation:
+        :param dilation_rate:
+        :param name:
+        :param kernel_regularizer:
+        :param train_able:
+        """
         super(Con_Bn_Act, self).__init__()
         self.kernel_regularizer = kernel_regularizer
         self.filters = filters
@@ -24,9 +40,6 @@ class Con_Bn_Act(Model):
         self.dilation_rate = dilation_rate
         self.block_name = name
         self.train_able = train_able
-
-        if activation is None:
-            self.activation = 'relu'
 
         if self.kernel_regularizer:
             self.con_regularizer = regularizers.l2()
@@ -47,18 +60,13 @@ class Con_Bn_Act(Model):
         if self.train_able is False:
             self.con.trainable = False
         self.bn = BatchNormalization()
-        if self.activation is not None:
-            self.act = Activation(self.activation)
-        if self.activation == 'sigmoid' or self.activation == 'softmax':
-            self.act = Activation(self.activation, dtype='float32')
+        self.act = Activation(self.activation)
 
     def call(self, inputs, training=None, mask=None):
         con = self.con(inputs)
         bn = self.bn(con)
-        if self.kernel_size != (1, 1) and self.activation is not None:
-            out = self.act(bn)
-        else:
-            out = bn
+        out = self.act(bn)
+
         return out
 
 
@@ -68,7 +76,7 @@ class Sep_Con_Bn_Act(Model):
                  kernel_size=(3, 3),
                  padding='same',
                  strides=1,
-                 activation=None,
+                 activation='relu',
                  name=None):
         super(Sep_Con_Bn_Act, self).__init__()
         self.filters = filters
@@ -76,8 +84,6 @@ class Sep_Con_Bn_Act(Model):
         self.padding = padding
         self.strides = strides
         self.activation = activation
-        if activation is None:
-            self.activation = 'relu'
         self.block_name = name
 
         self.con = SeparableConv2D(filters=self.filters,
@@ -92,10 +98,8 @@ class Sep_Con_Bn_Act(Model):
     def call(self, inputs, training=None, mask=None):
         con = self.con(inputs)
         bn = self.bn(con)
-        if self.kernel_size != (1, 1):
-            out = self.act(bn)
-        else:
-            out = bn
+        out = self.act(bn)
+
         return out
 
 
@@ -117,28 +121,19 @@ class DW_Con_Bn_Act(Model):
         self.block_name = name
         self.activation = activation
 
-        self.con_1x1 = Con_Bn_Act(filters=self.filters,
-                                  kernel_size=(1, 1))
-
         self.dw_con = DepthwiseConv2D(kernel_size=self.kernel_size,
                                       strides=self.strides,
                                       use_bias=self.use_bias,
                                       padding=self.padding,
                                       name=self.block_name)
         self.bn = BatchNormalization()
-        if self.activation is not None:
-            self.act = Activation(self.activation)
+        self.act = Activation(self.activation)
 
     def call(self, inputs, training=None, mask=None):
-        con_1x1 = self.con_1x1(inputs)
-
-        con = self.dw_con(con_1x1)
+        con = self.dw_con(inputs)
         bn = self.bn(con)
+        out = self.act(bn)
 
-        if self.kernel_size != (1, 1) and self.activation is not None:
-            out = self.act(bn)
-        else:
-            return bn
         return out
 
 
@@ -147,24 +142,18 @@ class Aspp(Model):
         super(Aspp, self).__init__()
         self.filters = filters
 
-        self.con1x1 = Con_Bn_Act(filters=self.filters, kernel_size=(1, 1), activation=None, name='aspp_con1x1')
+        self.con1x1 = Con_Bn_Act(filters=self.filters, kernel_size=(1, 1), activation='relu', name='aspp_con1x1')
 
-        self.dila_con1 = Con_Bn_Act(filters=self.filters, dilation_rate=dila_rate1, activation=None, padding='same',
-                                name='aspp_dila_con1')
-        self.dila_con2 = Con_Bn_Act(filters=self.filters, dilation_rate=dila_rate2, activation=None, padding='same',
-                                name='aspp_dila_con2')
-        self.dila_con3 = Con_Bn_Act(filters=self.filters, dilation_rate=dila_rate3, activation=None, padding='same',
-                                name='aspp_dila_con3')
-        self.dila_con4 = Con_Bn_Act(filters=self.filters, dilation_rate=dila_rate4, activation=None, padding='same',
-                                    name='aspp_dila_con3')
+        self.dila_con1 = Con_Bn_Act(filters=self.filters, dilation_rate=dila_rate1, name='aspp_dila_con1')
+        self.dila_con2 = Con_Bn_Act(filters=self.filters, dilation_rate=dila_rate2, name='aspp_dila_con2')
+        self.dila_con3 = Con_Bn_Act(filters=self.filters, dilation_rate=dila_rate3, name='aspp_dila_con3')
+        self.dila_con4 = Con_Bn_Act(filters=self.filters, dilation_rate=dila_rate4, name='aspp_dila_con3')
 
-        self.pooling_1 = MaxPooling2D(name='aspp_pooling_pooling')
-        self.pooling_2 = Conv2D(filters=self.filters, kernel_size=(1, 1), padding='same',
-                                name='aspp_pooling_con1x1')
+        self.pooling_1 = MaxPooling2D(name='aspp_pooling_pooling', padding='same')
+        self.pooling_2 = Conv2D(filters=self.filters, kernel_size=(1, 1), name='aspp_pooling_con1x1')
         self.pooling_3 = UpSampling2D(name='aspp_pooling_upsampling')
 
-        self.concat_2 = Con_Bn_Act(filters=self.filters, kernel_size=(1, 1), padding='same',
-                                   name='aspp_concate_con1x1')
+        self.concat_2 = Con_Bn_Act(filters=self.filters, kernel_size=(1, 1), name='aspp_concate_con1x1')
 
     def call(self, inputs, training=None, mask=None):
         con1x1 = self.con1x1(inputs)
@@ -228,3 +217,37 @@ class SCBR_Block(Model):
 
         return out
 
+
+class Up_CBR_Block(Model):
+    def __init__(self, filters, num_cbr=1, block_name=''):
+        super(Up_CBR_Block, self).__init__()
+        self.filters = filters
+        self.num_cbr = num_cbr
+        self.block_name = None
+        self.block_name = block_name
+
+        self.con_blocks = CBR_Block(filters=self.filters, num_cbr=self.num_cbr, block_name=self.block_name)
+        self.up = UpSampling2D(name=self.block_name + '_up_sampling')
+
+    def call(self, inputs, training=None, mask=None):
+        con = self.con_blocks(inputs)
+        out = self.up(con)
+        return out
+
+
+def channel_shuffle(inputs, group=2):
+    """
+    用于通道混合
+
+    :param inputs:
+    :param group:
+    :return:
+    """
+    in_shape = inputs.get_shape().as_list()
+    h, w, in_channel = in_shape[1:]
+    assert in_channel % group == 0
+    out = tf.reshape(inputs, [-1, h, w, in_channel // group, group])
+    out = tf.transpose(out, [0, 1, 2, 4, 3])
+    out = tf.reshape(out, [-1, h, w, in_channel])
+
+    return out
