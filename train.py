@@ -5,8 +5,6 @@ from tensorflow.keras import mixed_precision
 from config.config_reader import ConfigReader
 from model.lgnet import LGNet
 from data_utils.data_loader import Data_Loader_File
-import matplotlib.pyplot as plt
-import pandas as pd
 import setproctitle
 import sys
 
@@ -15,7 +13,7 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 setproctitle.setproctitle("xzf")
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '6, 7'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '6, 7'
 # gpus = tf.config.list_physical_devices('GPU')
 # if len(gpus) > 0:
 #     tf.config.experimental.set_memory_growth(gpus[0], True)
@@ -36,16 +34,13 @@ class Train:
                  is_load_weight,
                  batch_size,
                  epochs,
-                 is_data_augmentation,
-                 augmentation_rate,
                  learning_rate,
                  experiment_name,
                  checkpoint_save_path,
                  checkpoint_input_path,
                  model_name,
                  optimizers,
-                 num_class,
-                 model_info
+                 num_class
                  ):
         """
 
@@ -56,27 +51,21 @@ class Train:
         :param is_load_weight:
         :param batch_size:
         :param epochs:
-        :param is_data_augmentation:
-        :param augmentation_rate:
         :param learning_rate:
         :param experiment_name:
         :param checkpoint_save_path:
         :param checkpoint_input_path:
         :param optimizers:
         :param num_class:
-        :param model_info:
         """
         self.load_weights = is_load_weight
         self.batch_size = batch_size
         self.epochs = epochs
-        self.is_data_augmentation = is_data_augmentation
         self.optimizers = optimizers
-        self.augmentation_rate = augmentation_rate
         self.learning_rate = learning_rate
         self.checkpoint_save_path = checkpoint_save_path + experiment_name + '.ckpt'
         self.checkpoint_input_path = checkpoint_input_path
         self.model_name = model_name
-        self.model_info = model_info
         self.num_class = num_class
 
         self.strategy = tf.distribute.MirroredStrategy()
@@ -89,10 +78,7 @@ class Train:
                                        train_label_path=train_label_path,
                                        validation_img_path=validation_img_path,
                                        validation_label_path=validation_label_path,
-                                       batch_size=batch_size,
-                                       is_data_augmentation=is_data_augmentation,
-                                       augmentation_rate=augmentation_rate
-                                       )
+                                       batch_size=batch_size)
         self.train_datasets = data_loader.load_train_data()
         self.val_datasets = data_loader.load_val_data()
 
@@ -106,32 +92,25 @@ class Train:
 
             # 这里最好用match case 看着会更舒服一些  但是升3.10包冲突太多就算了
             if self.model_name == 'lgnet':
-                filters_cbr = self.model_info['filters_cbr']
-                num_cbr = self.model_info['num_cbr']
-                model = LGNet(filters_cbr=filters_cbr,
-                              num_class=self.num_class,
-                              num_cbr=num_cbr
-                              )
+                model = LGNet(filters=32, num_class=self.num_class,)
             else:
                 print('[INFO]模型数据有误')
                 sys.exit()
 
+            optimizer = 'Adam'
             if self.optimizers == 'Adam':
-                optimizer = 'Adam'
                 print('[INFO] 使用Adam')
             elif self.optimizers == 'SGD':
                 optimizer = tf.keras.optimizers.SGD(learning_rate=self.learning_rate)
                 print('[INFO] 使用SGD,其值为：\t' + str(self.learning_rate))
             else:
-                optimizer = 'Adam'
                 print('[INFO] 未设置优化器 默认使用Adam')
 
             model.compile(
                 optimizer=optimizer,
-                loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                loss=tf.keras.losses.SparseCategoricalCrossentropy(),
                 # metrics=[tf.keras.metrics.MeanIoU(num_classes=self.num_class)]
-                metrics=['sparse_categorical_accuracy']
-            )
+                metrics=['sparse_categorical_accuracy'])
 
             if os.path.exists(self.checkpoint_input_path + '.index') and self.load_weights:
                 print("[INFO] -------------------------------------------------")
@@ -159,17 +138,10 @@ class Train:
             )
 
             if self.epochs == 1:
-                # 一般都是训练前专门看一下信息 所以正常训练时就不显示了 主要还是tmux不能上翻 有的时候会遮挡想看的信息
+                # 一般都是训练前专门看一下信息 所以正常训练时就不显示了
                 model.summary()
 
         return history
-
-
-def plot_learning_curves(history):
-    pd.DataFrame(history.history).plot(figsize=(8, 5))
-    plt.grid(True)
-    plt.gca().set_ylim(0, 1)
-    plt.savefig('./log/log_{time}.jpg')
 
 
 def train_init(config_path='./config/config.yml'):
@@ -187,7 +159,8 @@ def train_init(config_path='./config/config.yml'):
     train_label_path = refuge_info['train_label_path']
     validation_img_path = refuge_info['validation_img_path']
     validation_label_path = refuge_info['validation_label_path']
-
+    train_aug_img_path = refuge_info['train_aug_img_path']
+    train_aug_label_path = refuge_info['train_aug_label_path']
     train_info = config_reader.get_train_info()
     experiment_name = train_info['experiment_name']
     is_load_weight = train_info['is_load_weight']
@@ -195,18 +168,14 @@ def train_init(config_path='./config/config.yml'):
     epochs = train_info['epochs']
     is_data_augmentation = train_info['is_data_augmentation']
     learning_rate = train_info['learning_rate']
-    augmentation_rate = train_info['augmentation_rate']
     checkpoint_save_path = train_info['checkpoint_save_path']
     checkpoint_input_path = train_info['checkpoint_input_path']
     optimizers = train_info['optimizers']
     num_class = train_info['num_class']
     model_name = train_info['model_name']
 
-    lgnet_info = config_reader.get_lgnet_info()
-
-    model_info = None
-    if model_name == 'lgnet':
-        model_info = lgnet_info
+    if is_data_augmentation:
+        train_img_path, train_label_path = train_aug_img_path, train_aug_label_path
 
     tran_tab = str.maketrans('- :.', '____')
     experiment_name = experiment_name + str(start_time)[:19].translate(tran_tab)
@@ -219,20 +188,15 @@ def train_init(config_path='./config/config.yml'):
                 is_load_weight,
                 batch_size,
                 epochs,
-                is_data_augmentation,
-                augmentation_rate,
                 learning_rate,
                 experiment_name,
                 checkpoint_save_path,
                 checkpoint_input_path,
                 model_name,
                 optimizers,
-                num_class,
-                model_info
-                )
+                num_class)
 
     history = seg.model_train()
-    plot_learning_curves(history)
 
     end_time = datetime.datetime.now()
     print('time:\t' + str(end_time - start_time).split('.')[0])

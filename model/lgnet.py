@@ -12,13 +12,13 @@ class LGNet(Model):
         self.num_class = num_class
 
         self.en_cbr1 = Con_Bn_Act(filters=self.filters, name='en_cbr1')
-        self.asb1 = ASB(filters=self.filters, block_name='asb1')
+        self.asb1 = ASB(filters=self.filters, block_name='asb1', inputs_size=512)
         self.en_cbr2 = Con_Bn_Act(filters=self.filters, strides=2, name='en_cbr2')
-        self.asb2 = ASB(filters=self.filters, block_name='asb2')
+        self.asb2 = ASB(filters=self.filters, block_name='asb2', inputs_size=256)
         self.en_cbr3 = Con_Bn_Act(filters=self.filters, strides=2, name='en_cbr3')
-        self.asb3 = ASB(filters=self.filters, block_name='asb3')
+        self.asb3 = ASB(filters=self.filters, block_name='asb3', inputs_size=128)
         self.en_cbr4 = Con_Bn_Act(filters=self.filters, strides=2, name='en_cbr4')
-        self.asb4 = ASB(filters=self.filters, block_name='asb4')
+        self.asb4 = ASB(filters=self.filters, block_name='asb4', inputs_size=64)
         self.en_cbr5 = Con_Bn_Act(filters=self.filters, strides=2, name='en_cbr5')
 
         self.aspp = Aspp(filters=self.filters, dila_rate1=6, dila_rate2=12, dila_rate3=18, dila_rate4=24)
@@ -52,17 +52,18 @@ class LGNet(Model):
 
 
 class ASB(Model):
-    def __init__(self, filters, block_name, groups=2):
+    def __init__(self, filters, block_name, inputs_size, groups=2):
         super(ASB, self).__init__()
         self.filters = filters
         self.block_name = block_name + '_'
         self.groups = groups
+        self.inputs_size = inputs_size
 
         self.cbr1 = Con_Bn_Act(filters=self.filters//2, kernel_size=(1, 1), name=self.block_name+'ASB_cbr1x1_1')
         self.dcbr1 = DW_Con_Bn_Act(filters=self.filters//2, name='ASB_dcbr1')
         self.cbr2 = Con_Bn_Act(filters=self.filters//2, kernel_size=(1, 1), name=self.block_name+'ASB_cbr1x1_2')
 
-        self.gap = GlobalAveragePooling2D()
+        # self.gap = GlobalAveragePooling2D(keepdims=True)
         self.cbr3 = Con_Bn_Act(filters=self.filters//2, kernel_size=(1, 1), activation='sigmoid',
                                name=self.block_name+'ASB_cbr1x1_3')
 
@@ -73,12 +74,12 @@ class ASB(Model):
         dcbr1 = self.dcbr1(cbr1)
         cbr2 = self.cbr2(dcbr1)
 
-        gap = self.gap(cbr2)
+        gap = tf.reduce_mean(cbr2, [1, 2], keepdims=True)
         cbr3 = self.cbr3(gap)
 
         mul = multiply([cbr2, cbr3])
 
         out = tf.concat([shortcut, mul], axis=3)
-        out = channel_shuffle(out, 2)
+        out = channel_shuffle(out, self.inputs_size, 2)
 
         return out

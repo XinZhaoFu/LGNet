@@ -1,26 +1,22 @@
-lgnet_info:
-  filters_cbr: 32
-  num_cbr: 1
 refuge_info:
-  img_original_path: ./datasets/refuge_img/
-  label_original_path: ./datasets/refuge_label/
-  test_file_number_rate: 0.2
+  augmentation_rate: 9
+  img_original_path: ./datasets/refuge_datasets/refuge_img/
+  label_original_path: ./datasets/refuge_datasets/refuge_label/
   test_img_path: ./datasets/refuge_datasets/test/img/
   test_label_path: ./datasets/refuge_datasets/test/label/
-  train_file_number_rate: 0.6
+  train_aug_img_path: ./datasets/refuge_datasets/train/aug_img/
+  train_aug_label_path: ./datasets/refuge_datasets/train/aug_label/
   train_img_path: ./datasets/refuge_datasets/train/img/
   train_label_path: ./datasets/refuge_datasets/train/label/
-  validation_file_number_rate: 0.2
   validation_img_path: ./datasets/refuge_datasets/validation/img/
   validation_label_path: ./datasets/refuge_datasets/validation/label/
 train_info:
-  augmentation_rate: 0
   batch_size: 4
   checkpoint_input_path: ''
   checkpoint_save_path: ./checkpoint/
-  epochs: 200
+  epochs: 1
   experiment_name: lgnet_refuge
-  is_data_augmentation: false
+  is_data_augmentation: true
   is_load_weight: false
   learning_rate: 0.0001
   model_name: lgnet

@@ -1,10 +1,10 @@
-from random import randint, uniform
+from random import randint, uniform, shuffle
 import cv2
-import random
 import numpy as np
+from tqdm import tqdm
 
 
-def center_random_rotate_crop(img, label, center_offset=100, crop_size=512, crop_size_offset=300):
+def center_random_rotate_crop(img, label, center_offset=100):
     """
     先对图像进行随机旋转
     再以视杯区域中心点经小幅随机偏移后作为裁剪中心点 裁剪随机大小的图像
@@ -12,8 +12,6 @@ def center_random_rotate_crop(img, label, center_offset=100, crop_size=512, crop
     :param img:
     :param label:
     :param center_offset:
-    :param crop_size:
-    :param crop_size_offset:
     :return:
     """
     img, label = random_rotate(img, label, is_restrict=False)
@@ -28,21 +26,16 @@ def center_random_rotate_crop(img, label, center_offset=100, crop_size=512, crop
     center_row = int(sum(rows) / len(rows)) + randint(-center_offset, center_offset)
     center_col = int(sum(cols) / len(cols)) + randint(-center_offset, center_offset)
 
-    part_crop_size = crop_size // 2 + randint(-crop_size_offset, crop_size_offset)
+    part_crop_size = randint(img_size//4, img_size//2)
     row_left, row_right = max(center_row - part_crop_size, 0), min(center_row + part_crop_size, img_size)
     col_top, col_down = max(center_col - part_crop_size, 0), min(center_col + part_crop_size, img_size)
     crop_img_rows, crop_img_cols = row_right - row_left, col_down - col_top
 
-    crop_img = np.empty(shape=(crop_img_rows, crop_img_cols, img_channel), dtype=np.uint8)
-    crop_label = np.empty(shape=(crop_img_rows, crop_img_cols), dtype=np.uint8)
+    crop_img = np.empty(shape=(crop_img_rows, crop_img_cols, img_channel), dtype=np.int)
+    crop_label = np.empty(shape=(crop_img_rows, crop_img_cols), dtype=np.int)
 
     crop_img[:, :, :] = img[row_left:row_right, col_top:col_down, :]
     crop_label[:, :] = label[row_left:row_right, col_top:col_down]
-
-    # 尺寸校正
-    crop_size = max(crop_img_rows, crop_img_cols)
-    crop_img = cv2.resize(crop_img, dsize=(crop_size, crop_size))
-    crop_label = cv2.resize(crop_label, dsize=(crop_size, crop_size))
 
     return crop_img, crop_label
 
@@ -116,7 +109,7 @@ def random_color_shuffle(img):
     :return:
     """
     random_channel = [0, 1, 2]
-    random.shuffle(random_channel)
+    shuffle(random_channel)
     img[:, :, 0] = img[:, :, random_channel[0]]
     img[:, :, 1] = img[:, :, random_channel[1]]
     img[:, :, 2] = img[:, :, random_channel[2]]
@@ -248,57 +241,61 @@ def random_filling(img, label):
 
     return filling_img, filling_label
 
-# def get_augmentation(img,
-#                      con_label,
-#                      save_img_path,
-#                      save_label_path,
-#                      img_name,
-#                      label_name,
-#                      random_crop_num=1,
-#                      gridmask_num=1,
-#                      cutout_num=1,
-#                      random_filling_num=1):
-#     """
-#     数据扩增
-#
-#     :param random_filling_num:
-#     :param cutout_num:
-#     :param gridmask_num:
-#     :param random_crop_num:
-#     :param img:
-#     :param con_label:
-#     :param save_img_path:
-#     :param save_label_path:
-#     :param img_name:
-#     :param label_name:
-#     :return:
-#     """
-#     # random_crop
-#     for index in range(random_crop_num):
-#         crop_img, crop_label = random_crop(img, con_label)
-#         cv2.imwrite(save_img_path + img_name + '_random_crop_' + str(index) + '.jpg', crop_img)
-#         cv2.imwrite(save_label_path + label_name + '_random_crop_' + str(index) + '.png', crop_label)
-#
-#     # random_filling
-#     for index in range(random_filling_num):
-#         filling_img, filling_label = random_filling(img, con_label)
-#         cv2.imwrite(save_img_path + img_name + '_random_filling_' + str(index) + '.jpg', filling_img)
-#         cv2.imwrite(save_label_path + label_name + '_random_filling_' + str(index) + '.png', filling_label)
-#
-#     # gridmask
-#     for index in range(gridmask_num):
-#         gridmask_img = gridMask(img, rate=0.3)
-#         gridmask_img = random_color_scale(gridmask_img, alpha_rate=0.3, base_beta=30)
-#         gridmask_img, gridmask_label = random_rotate(gridmask_img, con_label)
-#         gridmask_img, gridmask_label = random_flip(gridmask_img, gridmask_label)
-#         cv2.imwrite(save_img_path + img_name + '_gridmask_' + str(index) + '.jpg', gridmask_img)
-#         cv2.imwrite(save_label_path + label_name + '_gridmask_' + str(index) + '.png', gridmask_label)
-#
-#     # cutout
-#     for index in range(cutout_num):
-#         cutout_img = cutout(img, mask_rate=0.3)
-#         cutout_img = random_color_scale(cutout_img, alpha_rate=0.3, base_beta=30)
-#         cutout_img, cutout_label = random_rotate(cutout_img, con_label)
-#         cutout_img, cutout_label = random_flip(cutout_img, cutout_label)
-#         cv2.imwrite(save_img_path + img_name + '_cutout_' + str(index) + '.jpg', cutout_img)
-#         cv2.imwrite(save_label_path + label_name + '_cutout_' + str(index) + '.png', cutout_label)
+
+def augmentation_process(ori_img, ori_label, augmentation_rate):
+    """
+
+    :param ori_img:
+    :param ori_label:
+    :param augmentation_rate: 扩增倍数
+    :return: aug_img_list, aug_label_list
+    """
+    aug_img_list, aug_label_list = [], []
+
+    for index in range(augmentation_rate):
+        choice_list = [randint(0, 1) for _ in range(4)]
+        img = np.empty(shape=ori_img.shape, dtype=np.uint8)
+        label = np.empty(shape=ori_label.shape, dtype=np.uint8)
+        img[:, :, :], label[:, :] = ori_img, ori_label
+
+        if choice_list[0]:
+            img, label = random_flip(img, label)
+        if choice_list[1]:
+            img, label = random_rotate(img, label)
+        if choice_list[2]:
+            img = random_color_shuffle(img)
+            img = random_color_scale(img, alpha_rate=0.2)
+        if choice_list[3]:
+            img, label = center_random_rotate_crop(img, label)
+        if randint(0, 1) == 1:
+            img = cutout(img)
+        else:
+            img = gridMask(img, rate=0.2)
+
+        aug_img_list.append(img)
+        aug_label_list.append(label)
+
+    return aug_img_list, aug_label_list
+
+
+def augmentation_distribution(img_file_list, label_file_list, target_img_path, target_label_path, augmentation_rate):
+    """
+
+    :param img_file_list:
+    :param label_file_list:
+    :param target_img_path:
+    :param target_label_path:
+    :param augmentation_rate:
+    :return:
+    """
+    assert len(img_file_list) == len(label_file_list)
+    for img_file, label_file in tqdm(zip(img_file_list, label_file_list), total=len(img_file_list)):
+        img = cv2.imread(img_file)
+        label = cv2.imread(label_file, 0)
+        img_name = (img_file.split('/')[-1]).split('.')[0]
+        label_name = (label_file.split('/')[-1]).split('.')[0]
+
+        aug_img_list, aug_label_list = augmentation_process(img, label, augmentation_rate)
+        for index in range(augmentation_rate):
+            cv2.imwrite(target_img_path + img_name + '_aug_' + str(index) + '.jpg', aug_img_list[index])
+            cv2.imwrite(target_label_path + label_name + '_aug_' + str(index) + '.png', aug_label_list[index])

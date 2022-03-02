@@ -235,19 +235,21 @@ class Up_CBR_Block(Model):
         return out
 
 
-def channel_shuffle(inputs, group=2):
+def channel_shuffle(inputs, inputs_size, group=2):
     """
     用于通道混合
 
+    :param inputs_size:
     :param inputs:
     :param group:
     :return:
     """
-    in_shape = inputs.get_shape().as_list()
-    h, w, in_channel = in_shape[1:]
+    in_shape = inputs.shape.as_list()
+    in_channel = in_shape[3]
+
     assert in_channel % group == 0
-    out = tf.reshape(inputs, [-1, h, w, in_channel // group, group])
+    out = tf.reshape(inputs, [-1, inputs_size, inputs_size, in_channel // group, group])
     out = tf.transpose(out, [0, 1, 2, 4, 3])
-    out = tf.reshape(out, [-1, h, w, in_channel])
+    out = tf.reshape(out, [-1, inputs_size, inputs_size, in_channel])
 
     return out

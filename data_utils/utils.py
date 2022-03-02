@@ -1,5 +1,8 @@
 import os
 import shutil
+from os import remove
+
+import cv2
 import numpy as np
 from tqdm import tqdm
 from glob import glob
@@ -80,7 +83,7 @@ def shuffle_file(img_file_list, label_file_list):
 
 def get_specific_type_file_list(file_path, file_type):
     """
-    对glob进行了一次封装 旨在避免有时windows下会出现反斜杠与斜杠混用的情况
+    对glob进行了一次封装 旨在避免windows下偶尔会出现反斜杠与斜杠混用的情况
 
     :param file_path:
     :param file_type:
@@ -117,3 +120,48 @@ def file_consistency_check(img_file_list, label_file_list):
     return flag
 
 
+def data_adjust(img_file_path, label_file_path):
+    """
+    调整label灰度值为类别码
+    调整图像尺寸为512
+
+    :param img_file_path:
+    :param label_file_path:
+    :return:
+    """
+    img_file_list = glob(img_file_path + '*.jpg')
+    label_file_list = glob(label_file_path + '*.png')
+    if len(label_file_list) == 0:
+        label_file_list = glob(label_file_path + '*.bmp')
+    assert len(img_file_list) == len(label_file_list)
+
+    for img_file, label_file in tqdm(zip(img_file_list, label_file_list), total=len(img_file_list)):
+        img = cv2.imread(img_file)
+        ori_label = cv2.imread(label_file, 0)
+        label = np.zeros(shape=ori_label.shape, dtype=np.uint8)
+
+        (rows, cols) = np.where(ori_label == 128)
+        label[rows, cols] = 1
+        (rows, cols) = np.where(ori_label == 0)
+        label[rows, cols] = 2
+
+        img = cv2.resize(img, (512, 512))
+        label = cv2.resize(label, (512, 512), interpolation=cv2.INTER_NEAREST)
+
+        cv2.imwrite(img_file, img)
+        cv2.imwrite(label_file, label)
+
+
+def label_bmp_to_png(label_path):
+    """
+    将label由bmp格式转为png格式
+
+    :param label_path:
+    :return:
+    """
+    label_file_list = glob(label_path + '*.bmp')
+    print('[INFO]载入bmp格式label 共计：' + str(len(label_file_list)))
+    for label_file in tqdm(label_file_list):
+        label = cv2.imread(label_file)
+        cv2.imwrite(label_file[:-3] + 'png', label)
+        remove(label_file)
