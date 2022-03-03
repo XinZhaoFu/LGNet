@@ -1,8 +1,9 @@
-from glob import glob
+import datetime
 from shutil import copyfile
 from config.config_reader import ConfigReader
 from tqdm import tqdm
-from data_utils.utils import shuffle_file, recreate_dir_list, data_adjust, label_bmp_to_png, get_specific_type_file_list
+from data_utils.utils import shuffle_file, recreate_dir_list, data_adjust, label_bmp_to_png, \
+    get_specific_type_file_list, file_consistency_check
 from loguru import logger
 from data_utils.augmentation_utils import augmentation_distribution
 
@@ -27,14 +28,12 @@ def data_distribution(img_file_list, label_file_list, target_img_path, target_la
 
 
 def distribution(is_bmp_to_png=False,
-                 is_data_adjust=True,
                  config_path='./config/config.yml',
                  train_file_rate=.6,
                  test_file_rate=.2):
     """
 
     :param is_bmp_to_png:是否将原始label由bmp格式转为png格式
-    :param is_data_adjust:是否将标签调整为类别码
     :param config_path:
     :param train_file_rate:
     :param test_file_rate:
@@ -64,14 +63,17 @@ def distribution(is_bmp_to_png=False,
     if is_bmp_to_png:
         label_bmp_to_png(label_original_path)
 
-    # ori_img_file_list = glob(img_original_path + '*.jpg')
-    # ori_label_file_list = glob(label_original_path + '*.png')
     ori_img_file_list = get_specific_type_file_list(img_original_path, 'jpg')
     ori_label_file_list = get_specific_type_file_list(label_original_path, 'png')
     print(len(ori_img_file_list), len(ori_label_file_list))
     assert len(ori_img_file_list) == len(ori_label_file_list)
 
+    if not file_consistency_check(ori_img_file_list, ori_label_file_list):
+        ori_img_file_list.sort()
+        ori_label_file_list.sort()
     ori_img_file_list, ori_label_file_list = shuffle_file(ori_img_file_list, ori_label_file_list)
+    if not file_consistency_check(ori_img_file_list, ori_label_file_list):
+        exit(0)
 
     file_num = len(ori_img_file_list)
     train_img_file_list = ori_img_file_list[:int(file_num * train_file_rate)]
@@ -88,7 +90,6 @@ def distribution(is_bmp_to_png=False,
     data_distribution(validation_img_file_list, validation_label_file_list,
                       validation_img_path, validation_label_path)
     data_distribution(test_img_file_list, test_label_file_list, test_img_path, test_label_path)
-    data_distribution(train_img_file_list, train_label_file_list, train_aug_img_path, train_aug_label_path)
     augmentation_distribution(train_img_file_list, train_label_file_list, train_aug_img_path, train_aug_label_path, augmentation_rate)
 
     # 录入日志
@@ -99,11 +100,14 @@ def distribution(is_bmp_to_png=False,
     logger.info('test_img_file_list: ' + ','.join(test_img_file_list))
     logger.info('test_label_file_list: ' + ','.join(test_label_file_list))
 
-    if is_data_adjust:
-        data_adjust(train_img_path, train_label_path)
-        data_adjust(validation_img_path, validation_label_path)
-        data_adjust(train_aug_img_path, train_aug_label_path)
+    data_adjust(train_img_path, train_label_path)
+    data_adjust(validation_img_path, validation_label_path)
+    data_adjust(test_img_path, test_label_path)
 
 
 if __name__ == '__main__':
+    start_time = datetime.datetime.now()
     distribution()
+
+    end_time = datetime.datetime.now()
+    print('time:\t' + str(end_time - start_time).split('.')[0])

@@ -1,6 +1,5 @@
-from data_utils.utils import shuffle_file, file_consistency_check
+from data_utils.utils import shuffle_file, file_consistency_check, get_specific_type_file_list
 import tensorflow as tf
-from glob import glob
 
 
 class Data_Loader_File:
@@ -50,18 +49,21 @@ def _data_preprocess(img_file_path,
     :param batch_size:
     :return:
     """
-    # img_file_list = get_specific_type_file_list(img_file_path, 'jpg')
-    # label_file_list = get_specific_type_file_list(label_file_path, 'png')
-    img_file_list = glob(img_file_path + '*.jpg')
-    label_file_list = glob(label_file_path + '*.png')
+    img_file_list = get_specific_type_file_list(img_file_path, 'jpg')
+    label_file_list = get_specific_type_file_list(label_file_path, 'png')
+
     assert len(img_file_list) > 0
     assert len(img_file_list) == len(label_file_list)
 
     img_file_list, label_file_list = shuffle_file(img_file_list, label_file_list)
+
     if not file_consistency_check(img_file_list, label_file_list):
+        print('[info]重新整理文件')
         img_file_list.sort()
         label_file_list.sort()
         img_file_list, label_file_list = shuffle_file(img_file_list, label_file_list)
+    if not file_consistency_check(img_file_list, label_file_list):
+        exit(0)
 
     print('[INFO]载入数据量：' + str(len(img_file_list)))
 

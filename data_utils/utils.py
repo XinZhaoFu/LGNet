@@ -1,7 +1,6 @@
 import os
 import shutil
 from os import remove
-
 import cv2
 import numpy as np
 from tqdm import tqdm
@@ -110,6 +109,7 @@ def file_consistency_check(img_file_list, label_file_list):
         img_name = (img_path.split('/')[-1]).split('.')[0]
         label_name = (label_path.split('/')[-1]).split('.')[0]
         if img_name != label_name:
+            print(img_name, label_name)
             flag = False
             break
     if flag:
@@ -150,6 +150,28 @@ def data_adjust(img_file_path, label_file_path):
 
         cv2.imwrite(img_file, img)
         cv2.imwrite(label_file, label)
+
+
+def one_data_adjust(ori_img, ori_label):
+    """
+    调整label灰度值为类别码
+    调整图像尺寸为512
+
+    :param ori_img:
+    :param ori_label:
+    :return:
+    """
+    label = np.zeros(shape=ori_label.shape, dtype=np.uint8)
+
+    (rows, cols) = np.where(ori_label == 128)
+    label[rows, cols] = 1
+    (rows, cols) = np.where(ori_label == 0)
+    label[rows, cols] = 2
+
+    img = cv2.resize(ori_img, (512, 512))
+    label = cv2.resize(label, (512, 512), interpolation=cv2.INTER_NEAREST)
+
+    return img, label
 
 
 def label_bmp_to_png(label_path):

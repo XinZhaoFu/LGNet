@@ -11,9 +11,9 @@ import sys
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
-setproctitle.setproctitle("xzf")
+setproctitle.setproctitle('怎么还没跑完')
 
-# os.environ['CUDA_VISIBLE_DEVICES'] = '6, 7'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 # gpus = tf.config.list_physical_devices('GPU')
 # if len(gpus) > 0:
 #     tf.config.experimental.set_memory_growth(gpus[0], True)
@@ -178,7 +178,7 @@ def train_init(config_path='./config/config.yml'):
         train_img_path, train_label_path = train_aug_img_path, train_aug_label_path
 
     tran_tab = str.maketrans('- :.', '____')
-    experiment_name = experiment_name + str(start_time)[:19].translate(tran_tab)
+    experiment_name = experiment_name + '_' + str(start_time)[:19].translate(tran_tab)
     print('[INFO] 实验名称：' + experiment_name)
 
     seg = Train(train_img_path,

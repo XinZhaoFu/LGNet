@@ -1,5 +1,21 @@
 from datetime import datetime
 import tensorflow as tf
+# from data_utils.augmentation_utils import augmentation_process
+# import cv2
+from data_utils.utils import get_specific_type_file_list
+
+img_list = get_specific_type_file_list('./datasets/refuge_datasets/train/img/', 'jpg')
+label_list = get_specific_type_file_list('./datasets/refuge_datasets/train/label/', 'png')
+
+img_list.sort()
+label_list.sort()
+print(img_list)
+print(label_list)
+
+# img = cv2.imread('./datasets/refuge_datasets/train/img/V0001.jpg')
+# label = cv2.imread('./datasets/refuge_datasets/train/label/V0010.png', 0)
+# img_list, label_list = augmentation_process(img, label, 9)
+
 
 # start_time = datetime.now()
 #

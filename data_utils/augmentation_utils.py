@@ -1,7 +1,9 @@
-from random import randint, uniform, shuffle
+import shutil
+from numpy.random import randint, uniform, shuffle
 import cv2
 import numpy as np
 from tqdm import tqdm
+from data_utils.utils import one_data_adjust
 
 
 def center_random_rotate_crop(img, label, center_offset=100):
@@ -23,10 +25,11 @@ def center_random_rotate_crop(img, label, center_offset=100):
         img_size = label_size
 
     rows, cols = np.where(label == 255)
+
     center_row = int(sum(rows) / len(rows)) + randint(-center_offset, center_offset)
     center_col = int(sum(cols) / len(cols)) + randint(-center_offset, center_offset)
-
     part_crop_size = randint(img_size//4, img_size//2)
+
     row_left, row_right = max(center_row - part_crop_size, 0), min(center_row + part_crop_size, img_size)
     col_top, col_down = max(center_col - part_crop_size, 0), min(center_col + part_crop_size, img_size)
     crop_img_rows, crop_img_cols = row_right - row_left, col_down - col_top
@@ -86,6 +89,7 @@ def random_color_scale(img, alpha_rate=0.3, base_beta=30):
     """
     img_rows, img_cols, img_channels = img.shape
     temp_img_split = np.zeros(shape=(img_rows, img_cols), dtype=np.uint8)
+
     for index in range(img_channels):
         temp_img_split = img[:, :, index]
         temp_img_split_beta = np.random.randint(-base_beta, base_beta, size=(img_rows, img_cols))
@@ -203,8 +207,7 @@ def gridMask(img, rate=0.1):
     cols_mask_length = int(0.1 * fill_img_cols_length * rate)
 
     fill_img = np.zeros((fill_img_rows_length, fill_img_cols_length, img_channel))
-    fill_img[int(0.1 * img_rows):int(0.1 * img_rows) + img_rows,
-    int(0.1 * img_cols):int(0.1 * img_cols) + img_cols] = img
+    fill_img[int(0.1 * img_rows):int(0.1 * img_rows) + img_rows, int(0.1 * img_cols):int(0.1 * img_cols) + img_cols] = img
 
     for width_num in range(10):
         for length_num in range(10):
@@ -294,8 +297,15 @@ def augmentation_distribution(img_file_list, label_file_list, target_img_path, t
         label = cv2.imread(label_file, 0)
         img_name = (img_file.split('/')[-1]).split('.')[0]
         label_name = (label_file.split('/')[-1]).split('.')[0]
-
         aug_img_list, aug_label_list = augmentation_process(img, label, augmentation_rate)
+
+        img, label = one_data_adjust(img, label)
+        # shutil.copyfile(img_file, target_img_path + img_name + '_' + '{:0>2d}'.format(0) + '.jpg')
+        # shutil.copyfile(label_file, target_label_path + label_name + '_' + '{:0>2d}'.format(0) + '.png')
+        cv2.imwrite(target_img_path + img_name + '_' + '{:0>2d}'.format(0) + '.jpg', img)
+        cv2.imwrite(target_label_path + label_name + '_' + '{:0>2d}'.format(0) + '.png', label)
+
         for index in range(augmentation_rate):
-            cv2.imwrite(target_img_path + img_name + '_aug_' + str(index) + '.jpg', aug_img_list[index])
-            cv2.imwrite(target_label_path + label_name + '_aug_' + str(index) + '.png', aug_label_list[index])
+            aug_img, aug_label = one_data_adjust(aug_img_list[index], aug_label_list[index])
+            cv2.imwrite(target_img_path + img_name + '_' + '{:0>2d}'.format(index+1) + '.jpg', aug_img)
+            cv2.imwrite(target_label_path + label_name + '_' + '{:0>2d}'.format(index+1) + '.png', aug_label)
