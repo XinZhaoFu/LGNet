@@ -91,10 +91,11 @@ def _load_and_preprocess_datasets(img_path, label_path):
 
     label = tf.io.read_file(label_path)
     label = tf.image.decode_png(label, channels=1)
+    label = tf.reshape(label, [512, 512])
     # label = tf.reshape(tensor=label, shape=(512, 512))
 
     label = tf.cast(label, dtype=tf.uint8)
-    # label = tf.one_hot(indices=label, depth=3)
+    label = tf.one_hot(indices=label, depth=3)
     print(image.shape, label.shape)
 
     return image, label

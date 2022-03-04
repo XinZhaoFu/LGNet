@@ -108,9 +108,9 @@ class Train:
 
             model.compile(
                 optimizer=optimizer,
-                loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+                loss=tf.keras.losses.CategoricalCrossentropy(),
                 # metrics=[tf.keras.metrics.MeanIoU(num_classes=self.num_class)]
-                metrics=['sparse_categorical_accuracy'])
+                metrics=['categorical_accuracy'])
 
             if os.path.exists(self.checkpoint_input_path + '.index') and self.load_weights:
                 print("[INFO] -------------------------------------------------")
