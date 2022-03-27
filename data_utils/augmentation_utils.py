@@ -3,7 +3,15 @@ from numpy.random import randint, uniform, shuffle
 import cv2
 import numpy as np
 from tqdm import tqdm
-from data_utils.utils import one_data_adjust
+from data_utils.utils import one_data_adjust, img_init_utils
+
+
+def center_crop(img, label):
+    crop_img, [crop_row_top, crop_row_down, crop_col_right, crop_col_left] = img_init_utils(img)
+    crop_label = np.zeros(shape=(crop_row_down - crop_row_top, crop_col_left - crop_col_right), dtype=np.uint8)
+    crop_label[:, :] = label[crop_row_top:crop_row_down, crop_col_right:crop_col_left]
+
+    return crop_img, crop_label
 
 
 def center_random_rotate_crop(img, label, center_offset=100):
@@ -28,14 +36,14 @@ def center_random_rotate_crop(img, label, center_offset=100):
 
     center_row = int(sum(rows) / len(rows)) + randint(-center_offset, center_offset)
     center_col = int(sum(cols) / len(cols)) + randint(-center_offset, center_offset)
-    part_crop_size = randint(img_size//4, img_size//2)
+    part_crop_size = randint(img_size//4, img_size//3)
 
     row_left, row_right = max(center_row - part_crop_size, 0), min(center_row + part_crop_size, img_size)
     col_top, col_down = max(center_col - part_crop_size, 0), min(center_col + part_crop_size, img_size)
     crop_img_rows, crop_img_cols = row_right - row_left, col_down - col_top
 
-    crop_img = np.empty(shape=(crop_img_rows, crop_img_cols, img_channel), dtype=np.int)
-    crop_label = np.empty(shape=(crop_img_rows, crop_img_cols), dtype=np.int)
+    crop_img = np.empty(shape=(crop_img_rows, crop_img_cols, img_channel), dtype=np.uint8)
+    crop_label = np.empty(shape=(crop_img_rows, crop_img_cols), dtype=np.uint8)
 
     crop_img[:, :, :] = img[row_left:row_right, col_top:col_down, :]
     crop_label[:, :] = label[row_left:row_right, col_top:col_down]
@@ -88,10 +96,10 @@ def random_color_scale(img, alpha_rate=0.3, base_beta=30):
     :return:
     """
     img_rows, img_cols, img_channels = img.shape
-    temp_img_split = np.zeros(shape=(img_rows, img_cols), dtype=np.uint8)
 
     for index in range(img_channels):
-        temp_img_split = img[:, :, index]
+        temp_img_split = np.zeros(shape=(img_rows, img_cols), dtype=np.uint8)
+        temp_img_split[:, :] = img[:, :, index]
         temp_img_split_beta = np.random.randint(-base_beta, base_beta, size=(img_rows, img_cols))
         alpha = uniform(1 - alpha_rate, 1 + alpha_rate)
         temp_img_split = temp_img_split * alpha + temp_img_split_beta
@@ -206,7 +214,7 @@ def gridMask(img, rate=0.1):
     rows_mask_length = int(0.1 * fill_img_rows_length * rate)
     cols_mask_length = int(0.1 * fill_img_cols_length * rate)
 
-    fill_img = np.zeros((fill_img_rows_length, fill_img_cols_length, img_channel))
+    fill_img = np.zeros((fill_img_rows_length, fill_img_cols_length, img_channel), dtype=np.uint8)
     fill_img[int(0.1 * img_rows):int(0.1 * img_rows) + img_rows, int(0.1 * img_cols):int(0.1 * img_cols) + img_cols] = img
 
     for width_num in range(10):
@@ -245,18 +253,19 @@ def random_filling(img, label):
     return filling_img, filling_label
 
 
-def augmentation_process(ori_img, ori_label, augmentation_rate):
+def augmentation_process(ori_img, ori_label, augmentation_rate, is_center_crop=True):
     """
 
     :param ori_img:
     :param ori_label:
     :param augmentation_rate: 扩增倍数
+    :param is_center_crop:
     :return: aug_img_list, aug_label_list
     """
     aug_img_list, aug_label_list = [], []
 
     for index in range(augmentation_rate):
-        choice_list = [randint(0, 1) for _ in range(4)]
+        choice_list = [randint(0, 2) for _ in range(4)]
         img = np.empty(shape=ori_img.shape, dtype=np.uint8)
         label = np.empty(shape=ori_label.shape, dtype=np.uint8)
         img[:, :, :], label[:, :] = ori_img, ori_label
@@ -269,8 +278,11 @@ def augmentation_process(ori_img, ori_label, augmentation_rate):
             img = random_color_shuffle(img)
             img = random_color_scale(img, alpha_rate=0.2)
         if choice_list[3]:
-            img, label = center_random_rotate_crop(img, label)
-        if randint(0, 1) == 1:
+            if is_center_crop:
+                img, label = center_random_rotate_crop(img, label)
+            else:
+                img, label = random_crop(img, label)
+        if randint(0, 2) == 1:
             img = cutout(img)
         else:
             img = gridMask(img, rate=0.2)
@@ -293,15 +305,14 @@ def augmentation_distribution(img_file_list, label_file_list, target_img_path, t
     """
     assert len(img_file_list) == len(label_file_list)
     for img_file, label_file in tqdm(zip(img_file_list, label_file_list), total=len(img_file_list)):
-        img = cv2.imread(img_file)
-        label = cv2.imread(label_file, 0)
+        ori_img = cv2.imread(img_file)
+        ori_label = cv2.imread(label_file, 0)
         img_name = (img_file.split('/')[-1]).split('.')[0]
         label_name = (label_file.split('/')[-1]).split('.')[0]
-        aug_img_list, aug_label_list = augmentation_process(img, label, augmentation_rate)
 
-        img, label = one_data_adjust(img, label)
-        # shutil.copyfile(img_file, target_img_path + img_name + '_' + '{:0>2d}'.format(0) + '.jpg')
-        # shutil.copyfile(label_file, target_label_path + label_name + '_' + '{:0>2d}'.format(0) + '.png')
+        aug_img_list, aug_label_list = augmentation_process(ori_img, ori_label, augmentation_rate, is_center_crop=True)
+
+        img, label = one_data_adjust(ori_img, ori_label)
         cv2.imwrite(target_img_path + img_name + '_' + '{:0>2d}'.format(0) + '.jpg', img)
         cv2.imwrite(target_label_path + label_name + '_' + '{:0>2d}'.format(0) + '.png', label)
 
@@ -309,3 +320,15 @@ def augmentation_distribution(img_file_list, label_file_list, target_img_path, t
             aug_img, aug_label = one_data_adjust(aug_img_list[index], aug_label_list[index])
             cv2.imwrite(target_img_path + img_name + '_' + '{:0>2d}'.format(index+1) + '.jpg', aug_img)
             cv2.imwrite(target_label_path + label_name + '_' + '{:0>2d}'.format(index+1) + '.png', aug_label)
+
+        crop_img, crop_label = center_crop(ori_img, ori_label)
+        crop_aug_img_list, crop_aug_label_list = augmentation_process(crop_img, crop_label, augmentation_rate, is_center_crop=False)
+
+        crop_img, crop_label = one_data_adjust(crop_img, crop_label)
+        cv2.imwrite(target_img_path + img_name + '_crop_' + '{:0>2d}'.format(0) + '.jpg', crop_img)
+        cv2.imwrite(target_label_path + label_name + '_crop_' + '{:0>2d}'.format(0) + '.png', crop_label)
+
+        for index in range(augmentation_rate):
+            crop_aug_img, crop_aug_label = one_data_adjust(crop_aug_img_list[index], crop_aug_label_list[index])
+            cv2.imwrite(target_img_path + img_name + '_crop_' + '{:0>2d}'.format(index + 1) + '.jpg', crop_aug_img)
+            cv2.imwrite(target_label_path + label_name + '_crop_' + '{:0>2d}'.format(index + 1) + '.png', crop_aug_label)

@@ -1,16 +1,44 @@
-from datetime import datetime
-import tensorflow as tf
+# from datetime import datetime
+# import tensorflow as tf
 # from data_utils.augmentation_utils import augmentation_process
 # import cv2
-from data_utils.utils import get_specific_type_file_list
+# import time
+import cv2
+import numpy as np
+np.set_printoptions(threshold=np.inf)
 
-img_list = get_specific_type_file_list('./datasets/refuge_datasets/train/img/', 'jpg')
-label_list = get_specific_type_file_list('./datasets/refuge_datasets/train/label/', 'png')
+from data_utils.utils import get_specific_type_file_list, img_init_utils, reverse_one_data_adjust
 
-img_list.sort()
-label_list.sort()
-print(img_list)
-print(label_list)
+label_file_list = get_specific_type_file_list('./datasets/refuge_datasets/train/aug_label/', 'png')
+label_file_list = label_file_list[:40]
+
+for label_file in label_file_list:
+    label = cv2.imread(label_file, 0)
+    label_name = label_file.split('/')[-1]
+    re_label = reverse_one_data_adjust(label)
+    cv2.imwrite('./datasets/refuge_datasets/temp/' + label_name, re_label)
+
+# label = cv2.imread('./datasets/refuge_datasets/temp/V0001_00.png', 0)
+# print(label)
+
+
+# img_file_list = get_specific_type_file_list('./datasets/refuge_datasets/test/img/', 'jpg')
+# for img_file in img_file_list:
+#     img = cv2.imread(img_file)
+#     img_name = img_file.split('/')[-1]
+#     crop_img, _ = img_init_utils(img)
+#     cv2.imwrite('./datasets/refuge_datasets/temp/' + img_name, crop_img)
+
+# for _ in range(100):
+#     choice_list = [np.random.randint(0, 2) for _ in range(4)]
+#     print(choice_list)
+
+# label_list = get_specific_type_file_list('./datasets/refuge_datasets/train/label/', 'png')
+
+# img_list.sort()
+# label_list.sort()
+# print(img_list)
+# print(label_list)
 
 # img = cv2.imread('./datasets/refuge_datasets/train/img/V0001.jpg')
 # label = cv2.imread('./datasets/refuge_datasets/train/label/V0010.png', 0)
@@ -43,3 +71,5 @@ print(label_list)
 #     print(temp)
 #     temp = tf.reshape(temp, [6])
 #     print(temp)
+
+

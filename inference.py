@@ -1,5 +1,5 @@
 # coding=utf-8
-from data_utils.utils import get_specific_type_file_list
+from data_utils.utils import get_specific_type_file_list, test_img_init
 import cv2
 import os
 from model.lgnet import LGNet
@@ -30,19 +30,15 @@ def seg_predict(checkpoint_save_path, test_file_path, predict_save_path):
     # 加载模型
 
     model = LGNet()
-
     model.load_weights(checkpoint_save_path)
 
     test_file_path_list = get_specific_type_file_list(test_file_path, 'jpg')
-    test_file_path_list = [test_file_path_list[0]]
 
     for test_file in tqdm(test_file_path_list):
         test_img = cv2.imread(test_file)
         test_img_name = (test_file.split('/')[-1]).split('.')[0]
 
-        test_img = cv2.resize(test_img, dsize=(512, 512))
-        test_img = np.array(test_img / 255.)
-        test_img = np.reshape(test_img, newshape=(1, 512, 512, 3))
+        test_img, test_info = test_img_init(test_img)
 
         predict_temp = model.predict(test_img)
 
@@ -58,7 +54,7 @@ def seg_predict(checkpoint_save_path, test_file_path, predict_save_path):
 def main():
     checkpoint_save_path = './checkpoint/lgnet_refuge_2022_03_03_19_00_52.ckpt'
 
-    test_file_path = './datasets/refuge_datasets/test/temp/'
+    test_file_path = './datasets/refuge_datasets/test/img/'
     predict_save_path = './datasets/refuge_datasets/test/predict/'
 
     start_time = datetime.datetime.now()

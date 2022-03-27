@@ -120,13 +120,14 @@ def file_consistency_check(img_file_list, label_file_list):
     return flag
 
 
-def data_adjust(img_file_path, label_file_path):
+def data_adjust(img_file_path, label_file_path, is_resize=True):
     """
     调整label灰度值为类别码
     调整图像尺寸为512
 
     :param img_file_path:
     :param label_file_path:
+    :param is_resize: 是否调整图片尺寸  测试集不需要
     :return:
     """
     img_file_list = glob(img_file_path + '*.jpg')
@@ -137,6 +138,8 @@ def data_adjust(img_file_path, label_file_path):
 
     for img_file, label_file in tqdm(zip(img_file_list, label_file_list), total=len(img_file_list)):
         img = cv2.imread(img_file)
+
+
         ori_label = cv2.imread(label_file, 0)
         label = np.zeros(shape=ori_label.shape, dtype=np.uint8)
 
@@ -145,8 +148,9 @@ def data_adjust(img_file_path, label_file_path):
         (rows, cols) = np.where(ori_label == 0)
         label[rows, cols] = 2
 
-        img = cv2.resize(img, (512, 512))
-        label = cv2.resize(label, (512, 512), interpolation=cv2.INTER_NEAREST)
+        if is_resize:
+            img = cv2.resize(img, (512, 512))
+            label = cv2.resize(label, (512, 512), interpolation=cv2.INTER_NEAREST)
 
         cv2.imwrite(img_file, img)
         cv2.imwrite(label_file, label)
@@ -174,6 +178,22 @@ def one_data_adjust(ori_img, ori_label):
     return img, label
 
 
+def reverse_one_data_adjust(ori_label):
+    """
+    one_data_adjust反置 但未设置尺寸调节
+    :param ori_label:
+    :return:
+    """
+    label = np.zeros(shape=ori_label.shape, dtype=np.uint8)
+
+    (rows, cols) = np.where(ori_label == 1)
+    label[rows, cols] = 128
+    (rows, cols) = np.where(ori_label == 2)
+    label[rows, cols] = 255
+
+    return label
+
+
 def label_bmp_to_png(label_path):
     """
     将label由bmp格式转为png格式
@@ -187,3 +207,35 @@ def label_bmp_to_png(label_path):
         label = cv2.imread(label_file)
         cv2.imwrite(label_file[:-3] + 'png', label)
         remove(label_file)
+
+
+def img_init_utils(img):
+    """
+
+    :param img:
+    :return:
+    """
+    img_size, _, _ = img.shape
+    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    _, max_val, _, max_loc = cv2.minMaxLoc(img_gray)
+
+    crop_row_top, crop_row_down = max(max_loc[1] - 256, 0), min(max_loc[1] + 256, img_size)
+    crop_col_right, crop_col_left = max(max_loc[0] - 256, 0), min(max_loc[0] + 256, img_size)
+    # print(crop_row_top, crop_row_down, crop_col_right, crop_col_left)
+    position_img = np.zeros(shape=(crop_row_down - crop_row_top, crop_col_left - crop_col_right, 3), dtype=np.uint8)
+    position_img[:, :, :] = img[crop_row_top:crop_row_down, crop_col_right:crop_col_left, :]
+    return position_img, [crop_row_top, crop_row_down, crop_col_right, crop_col_left]
+
+
+def test_img_init(test_img):
+    """
+
+    :param test_img:
+    :return:
+    """
+    test_img, init_info = img_init_utils(test_img)
+    test_img = cv2.resize(test_img, dsize=(512, 512))
+    test_img = np.array(test_img / 255.)
+    test_img = np.reshape(test_img, newshape=(1, 512, 512, 3))
+
+    return test_img, init_info

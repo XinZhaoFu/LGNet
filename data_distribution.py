@@ -102,7 +102,7 @@ def distribution(is_bmp_to_png=False,
 
     data_adjust(train_img_path, train_label_path)
     data_adjust(validation_img_path, validation_label_path)
-    data_adjust(test_img_path, test_label_path)
+    data_adjust(test_img_path, test_label_path, is_resize=False)
 
 
 if __name__ == '__main__':

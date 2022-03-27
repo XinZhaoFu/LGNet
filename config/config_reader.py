@@ -1,4 +1,5 @@
 import yaml
+from time import time
 from loguru import logger
 
 
@@ -8,7 +9,8 @@ class ConfigReader:
 
         file_reader = open(self.config_path, 'r', encoding='utf-8')
         self.content_dictionary = yaml.load(file_reader.read(), Loader=yaml.FullLoader)
-        logger.add('./log/log_{time}.log', format='{time} | {message}', level='INFO')
+        time_str = str(time()).replace('.', '')
+        logger.add('./log/log_' + time_str + '.log', format='{time} | {message}', level='INFO')
         logger.info(self.content_dictionary)
 
         file_reader.close()
