@@ -4,14 +4,18 @@ import tensorflow as tf
 from tensorflow.keras import mixed_precision
 from config.config_reader import ConfigReader
 from model.lgnet import LGNet
+from model.unetm import UNetM
 from data_utils.data_loader import Data_Loader_File
 import setproctitle
 import sys
+import numpy as np
+from time import time
+from model.loss import categorical_crossentropy_weight, dice_loss, mix_dice_focal_loss
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
-setproctitle.setproctitle('怎么还没跑完')
+setproctitle.setproctitle('阿福给您拜个早年')
 
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 # gpus = tf.config.list_physical_devices('GPU')
@@ -91,11 +95,14 @@ class Train:
         with self.strategy.scope():
 
             # 这里最好用match case 看着会更舒服一些  但是升3.10包冲突太多就算了
-            if self.model_name == 'lgnet':
-                model = LGNet(filters=32, num_class=self.num_class,)
-            else:
-                print('[INFO]模型数据有误')
-                sys.exit()
+            # if self.model_name == 'lgnet':
+            #     model = LGNet(filters=32, num_class=self.num_class)
+            # else:
+            #     print('[INFO]模型数据有误')
+            #     sys.exit()
+
+            model = LGNet(filters=32, num_class=self.num_class)
+            # model = UNetM(filters=32, num_class=self.num_class)
 
             optimizer = 'Adam'
             if self.optimizers == 'Adam':
@@ -108,9 +115,12 @@ class Train:
 
             model.compile(
                 optimizer=optimizer,
-                loss=tf.keras.losses.CategoricalCrossentropy(),
+                # loss=categorical_crossentropy_weight(),
+                # loss=tf.keras.losses.CategoricalCrossentropy(),
+                loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+                # loss_weights=[1.0, 10.0, 10.0],
                 # metrics=[tf.keras.metrics.MeanIoU(num_classes=self.num_class)]
-                metrics=['categorical_accuracy'])
+                metrics=['accuracy', tf.keras.metrics.MeanIoU(num_classes=self.num_class)])
 
             if os.path.exists(self.checkpoint_input_path + '.index') and self.load_weights:
                 print("[INFO] -------------------------------------------------")
@@ -134,7 +144,7 @@ class Train:
                 verbose=1,
                 validation_data=self.val_datasets,
                 validation_freq=1,
-                callbacks=[checkpoint_callback]
+                callbacks=[checkpoint_callback],
             )
 
             if self.epochs == 1:
@@ -177,8 +187,8 @@ def train_init(config_path='./config/config.yml'):
     if is_data_augmentation:
         train_img_path, train_label_path = train_aug_img_path, train_aug_label_path
 
-    tran_tab = str.maketrans('- :.', '____')
-    experiment_name = experiment_name + '_' + str(start_time)[:19].translate(tran_tab)
+    time_str = str(time()).replace('.', '')
+    experiment_name = experiment_name + '_' + time_str
     print('[INFO] 实验名称：' + experiment_name)
 
     seg = Train(train_img_path,

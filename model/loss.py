@@ -92,6 +92,21 @@ def mix_dice_focal_loss(focal_alpha=0.0001, smooth=1.0, gamma=2.0, alpha=0.25):
     return mix_dice_focal_loss_fixed
 
 
+def categorical_crossentropy_weight():
+    """
+
+    :return:
+    """
+
+    def categorical_crossentropy_weight_fixed(y_true, y_pred):
+        sample_weight = tf.constant([0.1, 0.45, 0.45])
+        cce = tf.keras.losses.CategoricalCrossentropy()
+        loss = cce(y_true, y_pred) * sample_weight
+        return tf.reduce_sum(loss)
+
+    return categorical_crossentropy_weight_fixed
+
+
 def binary_crossentropy_weight():
     """
     bce的api文档过时了 sample_weight参数已经无效了
@@ -125,11 +140,26 @@ def dice_bce_loss():
 
     return dice_bce_loss_fixed
 
+
+def dice_ce_loss():
+    ce = tf.keras.losses.categorical_crossentropy
+    smooth = 1.0
+
+    def dice_ce_loss_fixed(y_true, y_pred):
+        y_true_sum = tf.reduce_sum(y_true)
+        y_pred_sum = tf.reduce_sum(y_pred)
+        intersection = tf.reduce_sum(y_true * y_pred)
+
+        dice_loss = 1 - (2.0 * intersection + smooth) / (y_true_sum + y_pred_sum + smooth)
+        ce_loss = ce(y_true, y_pred)
+        loss = dice_loss * 0.1 + ce_loss * 0.9
+
+        return loss
+
+    return dice_ce_loss_fixed
+
+
 """
-import torch
-import torch.nn as nn
-
-
 class BinaryDiceLoss(nn.Model):
 	def __init__(self):
 		super(BinaryDiceLoss, self).__init__()

@@ -6,17 +6,22 @@
 import cv2
 import numpy as np
 np.set_printoptions(threshold=np.inf)
-
+from data_utils.metrics_utils import get_vcdr
 from data_utils.utils import get_specific_type_file_list, img_init_utils, reverse_one_data_adjust
 
-label_file_list = get_specific_type_file_list('./datasets/refuge_datasets/train/aug_label/', 'png')
-label_file_list = label_file_list[:40]
+label = cv2.imread('./datasets/refuge_datasets/test/label/V0005.png', 0)
+vcdr = get_vcdr(label)
+print(vcdr)
 
-for label_file in label_file_list:
-    label = cv2.imread(label_file, 0)
-    label_name = label_file.split('/')[-1]
-    re_label = reverse_one_data_adjust(label)
-    cv2.imwrite('./datasets/refuge_datasets/temp/' + label_name, re_label)
+# # label_file_list = get_specific_type_file_list('./datasets/refuge_datasets/validation/label/', 'png')
+# label_file_list = get_specific_type_file_list('./datasets/refuge_datasets/test/label/', 'png')
+# # label_file_list = label_file_list[:40]
+#
+# for label_file in label_file_list:
+#     label = cv2.imread(label_file, 0)
+#     label_name = label_file.split('/')[-1]
+#     re_label = reverse_one_data_adjust(label)
+#     cv2.imwrite('./datasets/refuge_datasets/temp/' + label_name, re_label)
 
 # label = cv2.imread('./datasets/refuge_datasets/temp/V0001_00.png', 0)
 # print(label)

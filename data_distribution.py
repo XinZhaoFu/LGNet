@@ -3,7 +3,7 @@ from shutil import copyfile
 from config.config_reader import ConfigReader
 from tqdm import tqdm
 from data_utils.utils import shuffle_file, recreate_dir_list, data_adjust, label_bmp_to_png, \
-    get_specific_type_file_list, file_consistency_check
+    get_specific_type_file_list, file_consistency_check, datasets_check
 from loguru import logger
 from data_utils.augmentation_utils import augmentation_distribution
 
@@ -90,6 +90,10 @@ def distribution(is_bmp_to_png=False,
     data_distribution(validation_img_file_list, validation_label_file_list,
                       validation_img_path, validation_label_path)
     data_distribution(test_img_file_list, test_label_file_list, test_img_path, test_label_path)
+
+    train_img_file_list, train_label_file_list, validation_img_file_list, validation_label_file_list, test_img_file_list, test_label_file_list = datasets_check(
+        train_img_file_list, train_label_file_list, validation_img_file_list, validation_label_file_list, test_img_file_list, test_label_file_list)
+
     augmentation_distribution(train_img_file_list, train_label_file_list, train_aug_img_path, train_aug_label_path, augmentation_rate)
 
     # 录入日志
@@ -101,8 +105,9 @@ def distribution(is_bmp_to_png=False,
     logger.info('test_label_file_list: ' + ','.join(test_label_file_list))
 
     data_adjust(train_img_path, train_label_path)
-    data_adjust(validation_img_path, validation_label_path)
-    data_adjust(test_img_path, test_label_path, is_resize=False)
+    data_adjust(validation_img_path, validation_label_path, is_center=True)
+    # data_adjust(test_img_path, test_label_path, is_resize=False)
+    # data_adjust(test_img_path, test_label_path, is_center=True)
 
 
 if __name__ == '__main__':

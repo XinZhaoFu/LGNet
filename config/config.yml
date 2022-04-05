@@ -1,5 +1,5 @@
 refuge_info:
-  augmentation_rate: 9
+  augmentation_rate: 19
   img_original_path: ./datasets/refuge_datasets/refuge_img/
   label_original_path: ./datasets/refuge_datasets/refuge_label/
   test_img_path: ./datasets/refuge_datasets/test/img/
@@ -11,13 +11,13 @@ refuge_info:
   validation_img_path: ./datasets/refuge_datasets/validation/img/
   validation_label_path: ./datasets/refuge_datasets/validation/label/
 train_info:
-  batch_size: 32
-  checkpoint_input_path: ''
+  batch_size: 4
+  checkpoint_input_path: './checkpoint/lgnet_refuge_16486199096250243.ckpt'
   checkpoint_save_path: ./checkpoint/
   epochs: 1000
   experiment_name: lgnet_refuge
   is_data_augmentation: true
-  is_load_weight: false
+  is_load_weight: flase
   learning_rate: 0.0001
   model_name: lgnet
   num_class: 3
