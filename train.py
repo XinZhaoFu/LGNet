@@ -116,8 +116,8 @@ class Train:
             model.compile(
                 optimizer=optimizer,
                 # loss=categorical_crossentropy_weight(),
-                # loss=tf.keras.losses.CategoricalCrossentropy(),
-                loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+                loss=tf.keras.losses.CategoricalCrossentropy(),
+                # loss=tf.keras.losses.SparseCategoricalCrossentropy(),
                 # loss_weights=[1.0, 10.0, 10.0],
                 # metrics=[tf.keras.metrics.MeanIoU(num_classes=self.num_class)]
                 metrics=['accuracy', tf.keras.metrics.MeanIoU(num_classes=self.num_class)])
