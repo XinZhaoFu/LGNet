@@ -3,6 +3,7 @@ from data_utils.utils import get_specific_type_file_list, test_img_init, inferen
 import cv2
 import os
 from model.lgnet import LGNet
+from model.unetm import UNetM
 import tensorflow as tf
 import numpy as np
 import datetime
@@ -30,7 +31,8 @@ def seg_predict(checkpoint_save_path, test_file_path, predict_save_path):
     print('[info]模型加载 图片加载')
     # 加载模型
 
-    model = LGNet()
+    # model = LGNet()
+    model = UNetM()
     model.load_weights(checkpoint_save_path)
 
     test_file_path_list = get_specific_type_file_list(test_file_path, 'jpg')
@@ -41,7 +43,7 @@ def seg_predict(checkpoint_save_path, test_file_path, predict_save_path):
         test_img, test_info = test_img_init(test_file)
 
         predict_temp = model.predict(test_img)
-        print(predict_temp)
+        # print(predict_temp)
 
         predict_temp = tf.math.argmax(predict_temp, 3)
         predict_temp = np.array(predict_temp)
@@ -50,7 +52,7 @@ def seg_predict(checkpoint_save_path, test_file_path, predict_save_path):
         predict_img = np.zeros(shape=(512, 512), dtype=np.uint8)
         predict_img[:, :] = predict_temp[:, :] * 127
 
-        cv2.imwrite(predict_save_path + (test_file.split('/')[-1]).split('.')[0] + '.png', predict_img)
+        # cv2.imwrite(predict_save_path + (test_file.split('/')[-1]).split('.')[0] + '.png', predict_img)
 
 
 def seg_predict_batch(checkpoint_save_path, test_file_path, predict_save_path):
@@ -141,7 +143,7 @@ def predict(checkpoint_save_path, test_file_path, predict_save_path):
 
 
 def main():
-    checkpoint_save_path = './checkpoint/lgnet_refuge_16486436241999426.ckpt'
+    checkpoint_save_path = './checkpoint/lgnet_refuge_164946558224842/lgnet_refuge_164946558224842.ckpt'
 
     test_file_path = './datasets/refuge_datasets/test/img/'
     predict_save_path = './datasets/refuge_datasets/test/predict/'

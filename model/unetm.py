@@ -1,6 +1,5 @@
 from tensorflow.keras import Model
-from tensorflow.keras.layers import MaxPooling2D, UpSampling2D, concatenate
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import MaxPooling2D, concatenate
 from model.utils import Con_Bn_Act, Up_CBR_Block
 
 

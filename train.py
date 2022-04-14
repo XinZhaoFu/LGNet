@@ -5,7 +5,9 @@ from tensorflow.keras import mixed_precision
 from config.config_reader import ConfigReader
 from model.lgnet import LGNet
 from model.unetm import UNetM
+from model.utils import LGNet_Utils
 from data_utils.data_loader import Data_Loader_File
+from data_utils.utils import create_dir
 import setproctitle
 import sys
 import numpy as np
@@ -101,8 +103,9 @@ class Train:
             #     print('[INFO]模型数据有误')
             #     sys.exit()
 
-            model = LGNet(filters=32, num_class=self.num_class)
+            # model = LGNet(filters=32, num_class=self.num_class)
             # model = UNetM(filters=32, num_class=self.num_class)
+            model = LGNet_Utils(filters=32, num_class=self.num_class)
 
             optimizer = 'Adam'
             if self.optimizers == 'Adam':
@@ -120,14 +123,16 @@ class Train:
                 # loss=tf.keras.losses.SparseCategoricalCrossentropy(),
                 # loss_weights=[1.0, 10.0, 10.0],
                 # metrics=[tf.keras.metrics.MeanIoU(num_classes=self.num_class)]
-                metrics=['accuracy', tf.keras.metrics.MeanIoU(num_classes=self.num_class)])
+                # metrics=['accuracy', tf.keras.metrics.MeanIoU(num_classes=self.num_class)]
+                metrics=['categorical_accuracy']
+            )
 
-            if os.path.exists(self.checkpoint_input_path + '.index') and self.load_weights:
-                print("[INFO] -------------------------------------------------")
-                print("[INFO] -----------------loading weights-----------------")
-                print("[INFO] -------------------------------------------------")
-                print('[INFO] checkpoint_input_path:\t' + self.checkpoint_input_path)
-                model.load_weights(filepath=self.checkpoint_input_path)
+            # if os.path.exists(self.checkpoint_input_path + '.index') and self.load_weights:
+            #     print("[INFO] -------------------------------------------------")
+            #     print("[INFO] -----------------loading weights-----------------")
+            #     print("[INFO] -------------------------------------------------")
+            #     print('[INFO] checkpoint_input_path:\t' + self.checkpoint_input_path)
+            #     model.load_weights(filepath=self.checkpoint_input_path)
 
             checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
                 filepath=self.checkpoint_save_path,
@@ -171,6 +176,7 @@ def train_init(config_path='./config/config.yml'):
     validation_label_path = refuge_info['validation_label_path']
     train_aug_img_path = refuge_info['train_aug_img_path']
     train_aug_label_path = refuge_info['train_aug_label_path']
+
     train_info = config_reader.get_train_info()
     experiment_name = train_info['experiment_name']
     is_load_weight = train_info['is_load_weight']
@@ -190,6 +196,9 @@ def train_init(config_path='./config/config.yml'):
     time_str = str(time()).replace('.', '')
     experiment_name = experiment_name + '_' + time_str
     print('[INFO] 实验名称：' + experiment_name)
+
+    if create_dir(checkpoint_save_path + '/' + experiment_name + '/'):
+        checkpoint_save_path = checkpoint_save_path + '/' + experiment_name + '/'
 
     seg = Train(train_img_path,
                 train_label_path,

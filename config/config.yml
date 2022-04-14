@@ -11,8 +11,8 @@ refuge_info:
   validation_img_path: ./datasets/refuge_datasets/validation/img/
   validation_label_path: ./datasets/refuge_datasets/validation/label/
 train_info:
-  batch_size: 4
-  checkpoint_input_path: './checkpoint/lgnet_refuge_16486199096250243.ckpt'
+  batch_size: 16
+  checkpoint_input_path: ./checkpoint/
   checkpoint_save_path: ./checkpoint/
   epochs: 1000
   experiment_name: lgnet_refuge

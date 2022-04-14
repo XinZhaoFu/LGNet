@@ -17,11 +17,15 @@ def create_dir(folder_name):
     :param folder_name:
     :return: None
     """
+    flag = False
     if not os.path.exists(folder_name):
         os.makedirs(folder_name)
         print('[INFO] 新建文件夹：' + folder_name)
+        flag = True
     else:
         print('[INFO] 已存在文件夹：' + folder_name)
+
+    return flag
 
 
 def recreate_dir(folder_name):
@@ -415,3 +419,4 @@ def get_oc_od(predict):
     oc_predict[rows, cols] = 1
 
     return od_predict, oc_predict
+
